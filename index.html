@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#071d25">
   <meta name="description" content="Пробудите сады вечного света. Атмосферная игра три в ряд: 30 уровней, магические кристаллы, каскады и спокойный режим дзен.">
   <title>LUMINA — Сады вечного света</title>
-  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-  <link rel="preload" href="/assets/temple.webp" as="image">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="./assets/temple.webp" as="image">
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <div class="world" aria-hidden="true"></div>
@@ -37,7 +37,7 @@
     <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 12 8-12 8V4Z"/></symbol>
   </defs></svg>
   <header class="header">
-    <a class="brand" href="/" aria-label="Lumina — главная"><span class="brand-mark"><svg><use href="#i-gem"/></svg></span><span class="brand-type">LUMINA<span>САДЫ ВЕЧНОГО СВЕТА</span></span></a>
+    <a class="brand" href="./" aria-label="Lumina — главная"><span class="brand-mark"><svg><use href="#i-gem"/></svg></span><span class="brand-type">LUMINA<span>САДЫ ВЕЧНОГО СВЕТА</span></span></a>
     <nav class="mode-nav" aria-label="Режим игры"><button class="mode active" id="adventure-mode" aria-pressed="true">Приключение</button><button class="mode" id="zen-mode" aria-pressed="false"><svg><use href="#i-leaf"/></svg>Дзен</button></nav>
     <div class="header-actions"><button class="icon-button" id="sound-button" aria-label="Выключить звуки" title="Звуки"><svg><use href="#i-sound"/></svg></button><button class="icon-button" id="settings-button" aria-label="Настройки" title="Настройки"><svg><use href="#i-settings"/></svg></button><button class="icon-button" id="help-button" aria-label="Как играть" title="Как играть"><svg><use href="#i-help"/></svg></button></div>
   </header>
@@ -62,6 +62,6 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="sr-only" id="announcer" aria-live="polite" aria-atomic="true"></div>
   <dialog id="modal" aria-labelledby="modal-title"><div class="modal-shell"><button class="modal-close icon-button" id="modal-close" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button><div id="modal-body"></div></div></dialog>
-  <script type="module" src="/game.js"></script>
+  <script type="module" src="./game.js"></script>
 </body>
 </html>

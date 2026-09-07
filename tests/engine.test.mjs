@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { tile, adoptBoard, createBoard, findGroups, legalMoves, swap, adjacent, planWave, applyWave, collapse, shuffleBoard, combinedWave, specialPair, createFrost, levelConfig } from '../dist/engine.mjs';
+import { tile, adoptBoard, createBoard, findGroups, legalMoves, swap, adjacent, planWave, applyWave, collapse, shuffleBoard, combinedWave, specialPair, createFrost, levelConfig } from '../engine.mjs';
 let seed = 284019;
 const rng = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
 const blank = () => Array(64).fill(null);

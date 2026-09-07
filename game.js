@@ -528,7 +528,7 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pagehide', save);
 atlas.onload = () => { atlasReady = true; $('board-loading').classList.add('loaded'); resizeCanvas(); };
-atlas.onerror = () => { $('board-loading').innerHTML = '<p>Не удалось загрузить кристаллы.</p><button class="primary-button" id="reload-assets">Попробовать ещё раз</button>'; $('reload-assets').addEventListener('click', () => { atlas.src = '/assets/gems.webp?retry=' + Date.now(); }); };
-atlas.src = '/assets/gems.webp';
+atlas.onerror = () => { $('board-loading').innerHTML = '<p>Не удалось загрузить кристаллы.</p><button class="primary-button" id="reload-assets">Попробовать ещё раз</button>'; $('reload-assets').addEventListener('click', () => { atlas.src = './assets/gems.webp?retry=' + Date.now(); }); };
+atlas.src = './assets/gems.webp';
 applyPrefs(); loadGame(profile.mode); resizeCanvas(); requestAnimationFrame(render);
 if (!profile.seen) { profile.seen = true; save(); setTimeout(() => toast('Добро пожаловать в Лунные сады. Соедините три одинаковых кристалла.'), 1100); }
