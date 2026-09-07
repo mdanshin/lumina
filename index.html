@@ -3,65 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#071d25">
-  <meta name="description" content="Пробудите сады вечного света. Атмосферная игра три в ряд: 30 уровней, магические кристаллы, каскады и спокойный режим дзен.">
-  <title>LUMINA — Сады вечного света</title>
+  <meta name="theme-color" content="#0e1916">
+  <meta name="description" content="Два мира Lumina. Сады вечного света: приключение три в ряд. Кристальный фронт: головоломка и сражение армий в реальном времени.">
+  <title>LUMINA · Выберите свой мир</title>
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
-  <link rel="preload" href="./assets/temple.webp" as="image">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./menu.css">
 </head>
 <body>
-  <div class="world" aria-hidden="true"></div>
-  <div class="world-shade" aria-hidden="true"></div>
-  <div class="ambient" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-  <svg xmlns="http://www.w3.org/2000/svg" class="svg-defs" aria-hidden="true"><defs>
-    <symbol id="i-gem" viewBox="0 0 24 24"><path d="m12 2 9 8-9 12L3 10 12 2Z"/><path d="m3 10 18 0M12 2l-4 8 4 12 4-12-4-8Z"/></symbol>
-    <symbol id="i-sound" viewBox="0 0 24 24"><path d="m11 5-5 4H3v6h3l5 4V5Z"/><path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
-    <symbol id="i-mute" viewBox="0 0 24 24"><path d="m11 5-5 4H3v6h3l5 4V5Z"/><path d="m16 9 5 6m0-6-5 6"/></symbol>
-    <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13M9 9l12-2"/><ellipse cx="6" cy="18" rx="3" ry="3"/><ellipse cx="18" cy="16" rx="3" ry="3"/></symbol>
-    <symbol id="i-settings" viewBox="0 0 24 24"><path d="m9 3-1 3-3 1-2 4 2 2 0 4 4 2 3-1 3 1 4-2v-4l2-2-2-4-3-1-1-3H9Z"/><circle cx="12" cy="11" r="3"/></symbol>
-    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3h.01"/></symbol>
-    <symbol id="i-restart" viewBox="0 0 24 24"><path d="M3 10a9 9 0 1 1 2 8M3 4v6h6"/></symbol>
-    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
-    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
-    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="6" y="10" width="12" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v2"/></symbol>
-    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
-    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2 3 6.5 7 1-5 5 1.2 7-6.2-3.3L5.8 21l1.2-6.5-5-5 7-1L12 2Z"/></symbol>
-    <symbol id="i-hint" viewBox="0 0 24 24"><path d="M9 18h6m-5 3h4M8 14a7 7 0 1 1 8 0c-1 1-1 2-1 2H9s0-1-1-2Z"/></symbol>
-    <symbol id="i-wand" viewBox="0 0 24 24"><path d="m4 20 12-12 4 4L8 24M14 3V0m7 5 3-1M7 5 4 2m7 7 4 4" transform="translate(0 -3)"/></symbol>
-    <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 3-2 5-5m2-3c2-3 3-4 5-4h3m-4-4 4 4-4 4"/></symbol>
-    <symbol id="i-map" viewBox="0 0 24 24"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2V5Zm6-2v16m6-14v16"/></symbol>
-    <symbol id="i-snow" viewBox="0 0 24 24"><path d="M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 4l3 3 3-3M9 20l3-3 3 3M3 10l4-1-1-4m12 14-1-4 4-1M3 14l4 1-1 4M18 5l-1 4 4 1"/></symbol>
-    <symbol id="i-infinity" viewBox="0 0 24 24"><path d="M12 12c-4-8-10-6-10 0s6 8 10 0 10-6 10 0-6 8-10 0Z"/></symbol>
-    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M20 3C7 1 1 9 5 16s15 7 15-13ZM4 21 15 10"/></symbol>
-    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 12 8-12 8V4Z"/></symbol>
-  </defs></svg>
-  <header class="header">
-    <a class="brand" href="./" aria-label="Lumina — главная"><span class="brand-mark"><svg><use href="#i-gem"/></svg></span><span class="brand-type">LUMINA<span>САДЫ ВЕЧНОГО СВЕТА</span></span></a>
-    <nav class="mode-nav" aria-label="Режим игры"><button class="mode active" id="adventure-mode" aria-pressed="true">Приключение</button><button class="mode" id="zen-mode" aria-pressed="false"><svg><use href="#i-leaf"/></svg>Дзен</button></nav>
-    <div class="header-actions"><button class="icon-button" id="sound-button" aria-label="Выключить звуки" title="Звуки"><svg><use href="#i-sound"/></svg></button><button class="icon-button" id="settings-button" aria-label="Настройки" title="Настройки"><svg><use href="#i-settings"/></svg></button><button class="icon-button" id="help-button" aria-label="Как играть" title="Как играть"><svg><use href="#i-help"/></svg></button></div>
-  </header>
-  <main>
-    <div class="chapter-heading"><div class="eyebrow"><span></span><b id="chapter-label">ГЛАВА I</b><span></span></div><h1 id="chapter-title">Лунные сады</h1><p id="chapter-subtitle">Там, где пробуждается свет</p></div>
-    <div class="game-layout">
-      <aside class="hud" aria-label="Прогресс уровня">
-        <section class="goals-panel"><div class="panel-title"><span>ЦЕЛЬ УРОВНЯ</span><span class="tiny-diamond">◇</span></div><div id="goals" class="goals"></div><p class="goal-note" id="goal-note">Соберите кристаллы<br>и наполните сады светом.</p></section>
-        <section class="moves-panel"><div class="moves-orbit"><svg class="moves-ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-track" cx="60" cy="60" r="53"/><circle id="moves-ring" cx="60" cy="60" r="53"/></svg><strong id="moves">26</strong><span id="moves-label">ХОДОВ</span></div><div class="moves-warning" id="moves-warning"></div></section>
-        <section class="score-panel"><div class="panel-title">СОБРАНО СВЕТА</div><div class="score-number"><strong id="score">0</strong><span id="score-target">/ 1 800</span></div><div class="score-track"><div id="score-fill"></div><i></i><i></i><i></i></div><div class="score-stars" id="score-stars"><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg></div><span class="personal-best" id="personal-best">Ваше путешествие начинается</span></section>
-      </aside>
-      <section class="play-area" aria-label="Игровое поле">
-        <div class="board-toolbar"><span class="level-label"><span class="level-dot"></span><span id="level-label">УРОВЕНЬ 01</span></span><span class="board-status" id="board-status">Магия начинается с трёх</span><button class="icon-button restart" id="restart-button" aria-label="Начать уровень заново" title="Начать заново"><svg><use href="#i-restart"/></svg></button></div>
-        <div class="board-frame" id="board-frame"><span class="frame-corner tl"></span><span class="frame-corner tr"></span><span class="frame-corner bl"></span><span class="frame-corner br"></span><div class="board-inner"><canvas id="board" width="640" height="640" tabindex="0" role="application" aria-label="Поле 8 на 8. Меняйте соседние кристаллы местами, чтобы собрать три в ряд. Стрелки: выбор клетки. Пробел: выбрать кристалл. Стрелка после пробела: обмен."></canvas><div class="combo-label" id="combo-label" aria-hidden="true"></div><div class="board-loading" id="board-loading"><span class="loading-orbit"></span><p>Пробуждаем кристаллы…</p></div></div></div>
-        <div class="boosters" aria-label="Усилители"><button class="booster" id="hint-button"><span class="booster-icon hint"><svg><use href="#i-hint"/></svg></span><span>Подсказка<small>Свободный ход</small></span><kbd>H</kbd></button><span class="booster-divider"></span><button class="booster" id="hammer-button"><span class="booster-icon wand"><svg><use href="#i-wand"/></svg><b id="hammer-count">3</b></span><span>Искра<small>Убрать кристалл</small></span><kbd>1</kbd></button><span class="booster-divider"></span><button class="booster" id="shuffle-button"><span class="booster-icon shuffle"><svg><use href="#i-shuffle"/></svg><b id="shuffle-count">2</b></span><span>Вихрь<small>Перемешать поле</small></span><kbd>2</kbd></button></div>
-        <p class="play-instruction" id="play-instruction"><span class="instruction-spark">✦</span> Меняйте соседние кристаллы местами. Соберите 3 или больше.</p>
-      </section>
-      <aside class="journey-panel"><div class="panel-title">ВАШЕ ПУТЕШЕСТВИЕ</div><div class="journey-chapter"><svg><use href="#i-gem"/></svg><span id="journey-chapter">Лунные сады</span></div><div class="level-path" id="level-path"></div><button class="map-button" id="map-button"><svg><use href="#i-map"/></svg>Карта миров<svg><use href="#i-arrow"/></svg></button><div class="wisdom"><span class="wisdom-mark">✧</span><p id="wisdom-text">Четыре кристалла в ряд<br>рождают луч света.</p><button id="guide-button">Секреты магии <span>↗</span></button></div></aside>
+  <header class="menu-header"><span class="mini-brand">◇ LUMINA</span><span>КОЛЛЕКЦИЯ МИРОВ</span></header>
+  <main class="world-menu">
+    <div class="menu-title"><span class="title-mark" aria-hidden="true">◇</span><h1>LUMINA</h1><p>Выберите свой мир</p></div>
+    <div class="world-options">
+      <a class="world-choice gardens" href="./gardens.html" aria-label="Играть в Сады вечного света">
+        <img src="./assets/temple.webp" alt="Древний храм и кристаллы в лунном саду">
+        <span class="world-number">МИР 01</span><span class="world-tag">ПРИКЛЮЧЕНИЕ · ДЗЕН</span>
+        <div class="world-copy"><span class="world-symbol" aria-hidden="true">✧</span><h2>Сады вечного света</h2><p>Тихая магия кристаллов.<br>Тридцать уровней и бесконечный дзен.</p><div class="choice-bottom"><span class="play-label">Войти в сады <b aria-hidden="true">→</b></span><span id="garden-progress">Ваше путешествие начинается</span></div></div>
+      </a>
+      <a class="world-choice frontier" href="./battle.html" aria-label="Играть в Кристальный фронт">
+        <img src="./assets/frontier.webp" alt="Мост над разломом между зелёными и красными кристальными месторождениями">
+        <span class="world-number">МИР 02</span><span class="world-tag">СТРАТЕГИЯ · ПРОТИВ ИИ</span>
+        <div class="world-copy"><span class="world-symbol" aria-hidden="true">⟐</span><h2>Кристальный фронт</h2><p>Каждая комбинация питает вашу армию.<br>Прорвите оборону и захватите разлом.</p><div class="choice-bottom"><span class="play-label">На передовую <b aria-hidden="true">→</b></span><span id="front-progress">Три уровня сложности</span></div></div>
+      </a>
     </div>
+    <p class="menu-note">ДВА МИРА. ОДИН ИСТОЧНИК СВЕТА.</p>
   </main>
-  <footer class="footer"><span><span class="footer-spark">✧</span> НЕМНОГО МАГИИ В КАЖДОМ ХОДЕ</span><span id="save-status">Прогресс сохраняется на этом устройстве</span><button id="footer-help">Правила игры</button></footer>
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <div class="sr-only" id="announcer" aria-live="polite" aria-atomic="true"></div>
-  <dialog id="modal" aria-labelledby="modal-title"><div class="modal-shell"><button class="modal-close icon-button" id="modal-close" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button><div id="modal-body"></div></div></dialog>
-  <script type="module" src="./game.js"></script>
+  <footer class="menu-footer"><span>СОЗДАНО ДЛЯ МОМЕНТА СЕЙЧАС</span><span>Ваш прогресс сохраняется на этом устройстве</span></footer>
+  <script type="module" src="./menu.js"></script>
 </body>
 </html>
