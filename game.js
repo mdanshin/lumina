@@ -7,7 +7,7 @@ const fmt = n => Math.floor(n).toLocaleString('ru-RU');
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const wait = ms => new Promise(r => setTimeout(r, prefs.motion ? ms : Math.min(ms, 40)));
 const STORAGE = 'lumina-gardens-v1';
-const defaults = () => ({ version: 1, unlocked: 1, completed: {}, sessions: {}, mode: 'adventure', zenBest: 0, prefs: { muted: false, sfx: true, music: true, motion: !matchMedia('(prefers-reduced-motion: reduce)').matches }, seen: false });
+const defaults = () => ({ version: 1, unlocked: 1, completed: {}, sessions: {}, mode: 'adventure', zenBest: 0, prefs: { muted: false, sfx: true, music: true, motion: !matchMedia('(prefers-reduced-motion: reduce)').matches, autoHints: true }, seen: false });
 let profile = defaults(), storageAvailable = true;
 try {
   const stored = JSON.parse(localStorage.getItem(STORAGE));
@@ -262,7 +262,7 @@ function render(now) {
     ctx.save(); ctx.globalAlpha = Math.min(1, (1 - p) * 2); ctx.font = '500 22px Georgia'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff1bf'; ctx.shadowColor = '#06282c'; ctx.shadowBlur = 8; ctx.fillText(label.text, label.x, label.y - p * 37); ctx.restore();
   }
   labels = labels.filter(l => now - l.start < 1000);
-  if (!busy && state.status === 'playing' && !$('modal').open && now - lastAction > 9500 && now > hintUntil) {
+  if (prefs.autoHints && !busy && state.status === 'playing' && !$('modal').open && now - lastAction > 9500 && now > hintUntil) {
     const moves = legalMoves(state.board); if (moves.length) { hinted = moves[0]; hintUntil = now + 3400; lastAction = now - 1000; }
   }
 }
@@ -460,8 +460,13 @@ function helpModal() {
 }
 function settingsModal() {
   audio.start();
-  modal(`<p class="modal-eyebrow">ВАША АТМОСФЕРА</p><h2 class="modal-title" id="modal-title">Настройки</h2><div class="setting-row"><label for="pref-sfx">Звуки кристаллов<small>Обмены, каскады и маленькие победы</small></label><input type="checkbox" class="switch" id="pref-sfx" ${prefs.sfx ? 'checked' : ''}></div><div class="setting-row"><label for="pref-music">Музыка садов<small>Спокойная мелодия из светлых нот</small></label><input type="checkbox" class="switch" id="pref-music" ${prefs.music ? 'checked' : ''}></div><div class="setting-row"><label for="pref-motion">Анимация и частицы<small>Сияние, искры и плавные движения</small></label><input type="checkbox" class="switch" id="pref-motion" ${prefs.motion ? 'checked' : ''}></div><div class="settings-footer">30 уровней · 3 мира · Неограниченный дзен<br>Прогресс и текущая партия сохраняются на этом устройстве.${prefs.muted ? '<br>Общий звук выключен кнопкой в верхней панели.' : ''}</div><div class="modal-actions"><button class="primary-button" id="settings-done">Вернуться в сады</button><button class="secondary-button" id="settings-map">${icon('map')} Карта миров</button></div>`, () => {
-    for (const key of ['sfx', 'music', 'motion']) $(`pref-${key}`).addEventListener('change', e => { prefs[key] = e.target.checked; applyPrefs(); save(); if (key === 'music' && prefs.music) audio.ambient(); });
+  modal(`<p class="modal-eyebrow">ВАША АТМОСФЕРА</p><h2 class="modal-title" id="modal-title">Настройки</h2><div class="setting-row"><label for="pref-sfx">Звуки кристаллов<small>Обмены, каскады и маленькие победы</small></label><input type="checkbox" class="switch" id="pref-sfx" ${prefs.sfx ? 'checked' : ''}></div><div class="setting-row"><label for="pref-music">Музыка садов<small>Спокойная мелодия из светлых нот</small></label><input type="checkbox" class="switch" id="pref-music" ${prefs.music ? 'checked' : ''}></div><div class="setting-row"><label for="pref-motion">Анимация и частицы<small>Сияние, искры и плавные движения</small></label><input type="checkbox" class="switch" id="pref-motion" ${prefs.motion ? 'checked' : ''}></div><div class="setting-row"><label for="pref-autoHints">Автоподсказки<small>Показывать возможный ход после паузы</small></label><input type="checkbox" class="switch" id="pref-autoHints" ${prefs.autoHints ? 'checked' : ''}></div><div class="settings-footer">30 уровней · 3 мира · Неограниченный дзен<br>Прогресс и текущая партия сохраняются на этом устройстве.${prefs.muted ? '<br>Общий звук выключен кнопкой в верхней панели.' : ''}</div><div class="modal-actions"><button class="primary-button" id="settings-done">Вернуться в сады</button><button class="secondary-button" id="settings-map">${icon('map')} Карта миров</button></div>`, () => {
+    for (const key of ['sfx', 'music', 'motion', 'autoHints']) $(`pref-${key}`).addEventListener('change', e => {
+      prefs[key] = e.target.checked;
+      if (key === 'autoHints') { hinted = []; hintUntil = 0; lastAction = performance.now(); }
+      applyPrefs(); save();
+      if (key === 'music' && prefs.music) audio.ambient();
+    });
     $('settings-done').addEventListener('click', closeModal); $('settings-map').addEventListener('click', mapModal);
   });
 }
