@@ -1,6 +1,7 @@
 import { createBattle, tick, recruit, cast, upgrade, moveGems, resetBoard, serializeBattle, restoreBattle, UNITS, SPELLS, DIFFICULTIES, ENERGY_CAP, LIMIT, armySize, upgradeCost } from './battle-engine.mjs';
 import { adjacent, legalMoves, GEM_NAMES } from './engine.mjs';
-import { makeRenderer, drawUnit } from './battle-render.mjs';
+import { makeRenderer, drawUnit, setUnitAtlas } from './battle-render.mjs';
+import { battlePoint, projectBattlePoint } from './battle-view.mjs';
 
 const $=id=>document.getElementById(id),fmt=n=>Math.floor(n).toLocaleString('ru-RU');
 const STORAGE='lumina-frontier-v1',PREFS='lumina-frontier-prefs-v1',RECORD='lumina-frontier-record-v1';
@@ -10,7 +11,8 @@ const prefs={sfx:true,music:false,motion:!matchMedia('(prefers-reduced-motion: r
 let raw=null;try{raw=localStorage.getItem(STORAGE);}catch{}
 let state=restoreBattle(raw)||createBattle(prefs.difficulty),paused=state.status==='playing',selected=-1,cursor=0,keyboard=false,armed=null,pointer=null,lastAction=performance.now(),hints=[],hintUntil=0;
 let visualTime=0,lastFrame=performance.now(),accumulator=0,lastHUD=0,lastSave=0,toastUntil=0,gainUntil=0,comboUntil=0,musicAt=0;
-const atlas=new Image(),terrain=new Image(),dialog=$('dialog');
+const atlas=new Image(),terrain=new Image(),unitAtlas=new Image(),dialog=$('dialog');
+const deployedUntil = new Map();
 const renderer=makeRenderer($('battlefield'),$('puzzle'),atlas,terrain);
 let context=null,master=null;
 function sound(name,combo=1){
@@ -49,26 +51,70 @@ dialog.addEventListener('close',()=>{lastAction=performance.now();updateHUD();})
 dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeDialog();}});
 const purchased=Object.keys(UNITS).filter(k=>k!=='spark');
 const shortRoles={blade:'Ближний бой',bulwark:'Тяжёлая броня',lancer:'Против авиации',mortar:'Осадная пушка',wing:'Авиация',titan:'Штурмовой мех'};
-$('unit-buttons').innerHTML=purchased.map((kind,i)=>`<button class="unit-card" id="unit-${kind}" title="${UNITS[kind].role}. ${UNITS[kind].hp} здоровья, ${UNITS[kind].damage} урона. Клавиша ${i+1}." aria-label="Призвать ${UNITS[kind].name}, ${UNITS[kind].cost} энергии"><kbd class="unit-key">${i+1}</kbd><span class="unit-count" id="count-${kind}"></span><canvas width="180" height="100" aria-hidden="true"></canvas><span class="unit-name">${UNITS[kind].name}<span class="unit-cost">ϟ ${UNITS[kind].cost}</span></span><span class="unit-role">${shortRoles[kind]}</span></button>`).join('');
-for(const kind of purchased){const canvas=$(`unit-${kind}`).querySelector('canvas'),ctx=canvas.getContext('2d');drawUnit(ctx,kind,0,88,82,kind==='titan'?1.08:kind==='wing'?1.25:1.38);$(`unit-${kind}`).addEventListener('click',()=>{if(canPlay()&&recruit(state,0,kind)){sound('select');updateHUD();save();}});}
-drawUnit($('free-portrait').getContext('2d'),'spark',0,43,62,1.1);
+$('unit-buttons').innerHTML=purchased.map((kind,i)=>`<button class="unit-card" id="unit-${kind}" title="${UNITS[kind].role}. ${UNITS[kind].hp} здоровья, ${UNITS[kind].damage} урона. Клавиша ${i+1}." aria-label="Призвать ${UNITS[kind].name}, ${UNITS[kind].cost} энергии" aria-describedby="availability-${kind}"><kbd class="unit-key">${i+1}</kbd><span class="unit-count" id="count-${kind}"></span><canvas width="320" height="172" aria-hidden="true"></canvas><span class="unit-name">${UNITS[kind].name}<span class="unit-cost">ϟ ${UNITS[kind].cost}</span></span><span class="unit-role">${shortRoles[kind]}</span><span class="unit-availability" id="availability-${kind}">Начните бой</span></button>`).join('');
+function drawPortraits() {
+  for (const kind of purchased) {
+    const canvas = $(`unit-${kind}`).querySelector('canvas'), ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawUnit(ctx, kind, 0, 160, 143, kind === 'wing' ? 1.75 : 1.85);
+  }
+  const free = $('free-portrait').getContext('2d');
+  free.clearRect(0, 0, 96, 96);
+  drawUnit(free, 'spark', 0, 48, 82, 1.05);
+}
+for (const kind of purchased) $(`unit-${kind}`).addEventListener('click', () => {
+  if (canPlay() && recruit(state, 0, kind)) {
+    deployedUntil.set(kind, performance.now() + 1200);
+    $('announcer').textContent = `${UNITS[kind].name}: подкрепление прибыло. Осталось ${fmt(state.energy[0])} энергии.`;
+    sound('select'); updateHUD(); save();
+  }
+});
+drawPortraits();
 const symbols={storm:'ϟ',heal:'✚',stasis:'❄'};
-$('spell-buttons').innerHTML=Object.entries(SPELLS).map(([kind,d])=>`<button id="spell-${kind}" class="spell-button" title="${d.desc}. Нажмите на поле боя. Клавиша ${d.key}." aria-pressed="false"><span class="spell-symbol" aria-hidden="true">${symbols[kind]}</span><span class="spell-copy"><strong>${d.name}</strong><small>${kind==='storm'?'Урон по области':kind==='heal'?'Восстановление союзников':'Остановка врагов на 5 с'}</small></span><span class="spell-price"><b id="cost-${kind}">ϟ ${d.cost}</b><kbd>${d.key}</kbd></span></button>`).join('');
+const spellDescriptions = { storm: '40 урона/с · 4 секунды', heal: '+140 здоровья · ядру +85', stasis: 'Остановка врагов · 5 секунд' };
+$('spell-buttons').innerHTML=Object.entries(SPELLS).map(([kind,d])=>`<button id="spell-${kind}" class="spell-button" title="${d.desc}. Нажмите на поле боя. Клавиша ${d.key}." aria-pressed="false" aria-describedby="status-${kind}"><span class="spell-symbol" aria-hidden="true">${symbols[kind]}</span><span class="spell-copy"><strong>${d.name}</strong><small>${spellDescriptions[kind]}</small><span class="spell-status" id="status-${kind}">Начните бой</span></span><span class="spell-price"><b id="cost-${kind}">ϟ ${d.cost}</b><kbd>${d.key}</kbd></span></button>`).join('');
 for(const kind of Object.keys(SPELLS))$(`spell-${kind}`).addEventListener('click',()=>arm(kind));
-function arm(kind){if(!canPlay()||state.energy[0]<SPELLS[kind].cost||(state.cooldowns[0][kind]||0)>state.time)return;if(armed?.kind===kind){cancelTarget();return;}armed={kind,x:600,y:191};$('target-banner').hidden=false;$('target-label').textContent=`${SPELLS[kind].name}: выберите область на поле боя`;$('battle-viewport').scrollIntoView({block:'nearest',behavior:prefs.motion?'smooth':'instant'});updateHUD();}
-function cancelTarget(){armed=null;$('target-banner').hidden=true;for(const kind of Object.keys(SPELLS)){$(`spell-${kind}`).classList.remove('armed');$(`spell-${kind}`).setAttribute('aria-pressed','false');}}
+function arm(kind){if(!canPlay()||state.energy[0]<SPELLS[kind].cost||(state.cooldowns[0][kind]||0)>state.time)return;if(armed?.kind===kind){cancelTarget();return;}armed={kind,x:600,y:191};$('target-banner').hidden=false;$('battle-viewport').classList.add('targeting');revealTarget();$('target-label').textContent=`${SPELLS[kind].name}: выберите область на поле боя`;$('battle-viewport').scrollIntoView({block:'nearest',behavior:prefs.motion?'smooth':'instant'});updateHUD();}
+function cancelTarget(){armed=null;$('battle-viewport').classList.remove('targeting');$('target-banner').hidden=true;for(const kind of Object.keys(SPELLS)){$(`spell-${kind}`).classList.remove('armed');$(`spell-${kind}`).setAttribute('aria-pressed','false');}}
 $('cancel-target').addEventListener('click',cancelTarget);
 for(const key of ['attack','armor'])$(`upgrade-${key}`).addEventListener('click',()=>{if(canPlay()&&upgrade(state,0,key)){sound('select');toast(key==='attack'?'Урон всей армии увеличен на 20%.':'Здоровье всей армии увеличено на 18%.');updateHUD();save();}});
 function updateHUD(){
-  for(const [side,name] of [[0,'ally'],[1,'enemy']]){const core=state.structures.find(s=>s.kind==='core'&&s.side===side);$(`${name}-hp`).textContent=`${fmt(core.hp)} / ${fmt(core.maxHP)}`;$(`${name}-bar`).style.width=`${core.hp/core.maxHP*100}%`;$(`army-${name}`).textContent=armySize(state,side);}
+  for (const [side, name] of [[0, 'ally'], [1, 'enemy']]) {
+    const core = state.structures.find(s => s.kind === 'core' && s.side === side);
+    const towers = state.structures.filter(s => s.kind === 'tower' && s.side === side && s.hp > 0).length;
+    $(`${name}-hp`).textContent = `${fmt(core.hp)} / ${fmt(core.maxHP)}`;
+    $(`${name}-bar`).style.width = `${core.hp / core.maxHP * 100}%`;
+    $(`${name}-core-meter`).setAttribute('aria-valuenow', Math.ceil(core.hp));
+    $(`${name}-core-meter`).setAttribute('aria-valuemax', core.maxHP);
+    $(`${name}-towers`).textContent = towers ? `Башни: ${towers} / 2` : 'Ядро без защиты';
+    $(`army-${name}`).textContent = armySize(state, side);
+    if (side === 1) $('objective').textContent = core.hp <= 0 ? 'Вражеское ядро уничтожено' : towers ? `Защитных башен осталось: ${towers}. Прорвите оборону.` : 'Защита снята — уничтожьте вражеское ядро!';
+  }
   $('clock').textContent=`${String(Math.floor(state.time/60)).padStart(2,'0')}:${String(Math.floor(state.time%60)).padStart(2,'0')}`;
   $('difficulty-label').textContent=DIFFICULTIES[state.difficulty].name;
   $('match-state').textContent=state.time>=300?'ПЕРЕГРУЗКА · УРОН РАСТЁТ':'СЕКТОР 07 · РАЗЛОМ';
   $('energy').textContent=fmt(state.energy[0]);$('energy-bar').style.width=`${state.energy[0]/ENERGY_CAP*100}%`;
-  const active=canPlay();
-  for(const kind of purchased){$(`unit-${kind}`).disabled=!active||state.energy[0]<UNITS[kind].cost||armySize(state,0)>=LIMIT;const count=state.units.filter(u=>u.side===0&&u.kind===kind).length;$(`count-${kind}`).textContent=count?'×'+count:'';}
-  for(const [kind,d] of Object.entries(SPELLS)){const cooldown=Math.max(0,(state.cooldowns[0][kind]||0)-state.time),b=$(`spell-${kind}`);b.disabled=!active||state.energy[0]<d.cost||cooldown>0;b.classList.toggle('armed',armed?.kind===kind);b.setAttribute('aria-pressed',String(armed?.kind===kind));b.style.setProperty('--cooldown',cooldown/d.cooldown);$(`cost-${kind}`).textContent=cooldown>0?Math.ceil(cooldown)+' с':'ϟ '+d.cost;}
-  for(const key of ['attack','armor']){const level=state.upgrades[0][key],b=$(`upgrade-${key}`),cost=upgradeCost(state,0,key);b.innerHTML=`${key==='attack'?'Атака':'Броня'} ${level}/3 <span>${level===3?'МАКС.':'ϟ '+cost}</span>`;b.disabled=!active||level>=3||state.energy[0]<cost;}
+  const active=canPlay(), full=armySize(state,0)>=LIMIT;
+  const idle = state.status === 'ready' ? 'Начните бой' : state.status === 'playing' ? 'Бой на паузе' : 'Бой завершён';
+  for (const kind of purchased) {
+    const button = $(`unit-${kind}`), missing = Math.max(0, Math.ceil(UNITS[kind].cost - state.energy[0]));
+    const deployed = performance.now() < (deployedUntil.get(kind) || 0);
+    button.disabled = !active || missing > 0 || full;
+    button.classList.toggle('deployed', deployed);
+    const count=state.units.filter(u=>u.side===0&&u.kind===kind).length;
+    $(`count-${kind}`).textContent=count?'×'+count:'';
+    $(`availability-${kind}`).textContent = !active ? idle : deployed ? 'Подкрепление прибыло' : full ? `Лимит армии: ${LIMIT}` : missing ? `Нужно ещё ${missing} ϟ` : 'Готов к высадке';
+  }
+  for (const [kind, d] of Object.entries(SPELLS)) {
+    const cooldown=Math.max(0,(state.cooldowns[0][kind]||0)-state.time),b=$(`spell-${kind}`);
+    const missing = Math.max(0, Math.ceil(d.cost - state.energy[0]));
+    b.disabled=!active||missing>0||cooldown>0;
+    b.classList.toggle('armed',armed?.kind===kind);b.setAttribute('aria-pressed',String(armed?.kind===kind));
+    b.style.setProperty('--cooldown',cooldown/d.cooldown);
+    $(`cost-${kind}`).textContent='ϟ '+d.cost;
+    $(`status-${kind}`).textContent = !active ? idle : cooldown > 0 ? `Перезарядка: ${Math.ceil(cooldown)} с` : armed?.kind === kind ? 'Выберите цель на поле боя' : missing ? `Нужно ещё ${missing} ϟ` : 'Готово · выберите область';
+  }
+  for(const key of ['attack','armor']){const level=state.upgrades[0][key],b=$(`upgrade-${key}`),cost=upgradeCost(state,0,key);const content=`${key==='attack'?'Атака':'Броня'} ${level}/3 <span>${level===3?'МАКС.':'ϟ '+cost}</span>`;if(b.innerHTML!==content)b.innerHTML=content;b.disabled=!active||level>=3||state.energy[0]<cost;}
   $('stat-energy').textContent=fmt(state.stats[0].energy);$('stat-kills').textContent=state.stats[0].kills;
   $('hint').disabled=!active||!!state.phase;$('shuffle').disabled=!active||!!state.phase||state.time<state.shuffleAt;
   $('shuffle-label').textContent=state.time<state.shuffleAt?Math.ceil(state.shuffleAt-state.time)+' с':'Перемешать';
@@ -78,7 +124,7 @@ function settings(){
   showDialog(`<span class="micro">ПАРАМЕТРЫ ФРОНТА</span><h2 id="dialog-title">Настройки</h2>${[['sfx','Звуки боя','Кристаллы, подкрепления и способности'],['music','Фоновая музыка','Мягкие синтезаторные аккорды'],['motion','Анимация и частицы','Движение кристаллов и эффекты'],['autoHints','Автоподсказки','Показывать ход после паузы']].map(([key,title,description])=>`<div class="setting-row"><label for="pref-${key}">${title}<small>${description}</small></label><input id="pref-${key}" type="checkbox" ${prefs[key]?'checked':''}></div>`).join('')}<button id="settings-done" class="primary">Готово</button>`,()=>{for(const key of ['sfx','music','motion','autoHints'])$(`pref-${key}`).addEventListener('change',e=>{prefs[key]=e.target.checked;if(key==='autoHints'){hints=[];hintUntil=0;lastAction=performance.now();}applyPrefs();save();});$('settings-done').onclick=closeDialog;});
 }
 function help(){showDialog(`<span class="micro">БРИФИНГ КОМАНДИРА</span><h2 id="dialog-title">Энергия решает всё</h2><ol class="rules-list"><li>Собирайте три кристалла: получайте <strong>36 энергии и бойца «Искра»</strong>. Каскады увеличивают награду. Четыре камня создают луч, пять дают призму.</li><li>Тратьте энергию на армию. Войска сами движутся и атакуют. «Стрела» сбивает авиацию, «Гром» разбирает башни, «Бастион» прикрывает слабых бойцов.</li><li>Выберите способность, затем её цель на поле боя. Шторм наносит урон, ремонт восстанавливает здоровье, стазис останавливает врагов.</li><li>Разрушьте две башни и ядро противника. Ходы не ограничены, но сражение идёт постоянно. Через 5 минут урон обеих армий начинает расти.</li></ol><p>1–6: отряды. Q / W / E: способности. H: подсказка. R: перемешать. Пробел: пауза. Esc: отмена способности. На реакторе: стрелки, пробел и стрелка для обмена.</p><button id="briefing-done" class="primary">Понятно</button>`,()=>{$('briefing-done').onclick=closeDialog;});}
-function newBattle(){let chosen=state.difficulty;showDialog(`<span class="micro">НОВАЯ ОПЕРАЦИЯ</span><h2 id="dialog-title">Выберите сложность</h2><p>${state.status==='playing'?'Текущая схватка будет заменена новой. ':''}Сложность определяет скорость добычи энергии противником.</p><div class="difficulty-options">${Object.entries(DIFFICULTIES).map(([key,d])=>`<button class="difficulty-option ${key===chosen?'selected':''}" data-difficulty="${key}" aria-pressed="${key===chosen}">${d.name}<small>${key==='easy'?'Спокойный темп':key==='normal'?'Равный соперник':'Быстрые атаки'}</small></button>`).join('')}</div><button id="confirm-new" class="primary">Подготовить схватку</button><button id="cancel-new" class="dialog-secondary">Отмена</button>`,()=>{dialog.querySelectorAll('[data-difficulty]').forEach(b=>b.onclick=()=>{chosen=b.dataset.difficulty;dialog.querySelectorAll('[data-difficulty]').forEach(el=>{el.classList.toggle('selected',el===b);el.setAttribute('aria-pressed',String(el===b));});});$('confirm-new').onclick=()=>{prefs.difficulty=chosen;state=createBattle(chosen);paused=false;selected=-1;hints=[];hintUntil=0;armed=null;lastAction=performance.now();renderer.reset();accumulator=0;closeDialog();gate();updateHUD();save();$('battle-viewport').scrollIntoView({block:'center',behavior:prefs.motion?'smooth':'instant'});};$('cancel-new').onclick=closeDialog;});}
+function newBattle(){let chosen=state.difficulty;showDialog(`<span class="micro">НОВАЯ ОПЕРАЦИЯ</span><h2 id="dialog-title">Выберите сложность</h2><p>${state.status==='playing'?'Текущая схватка будет заменена новой. ':''}Сложность определяет скорость добычи энергии противником.</p><div class="difficulty-options">${Object.entries(DIFFICULTIES).map(([key,d])=>`<button class="difficulty-option ${key===chosen?'selected':''}" data-difficulty="${key}" aria-pressed="${key===chosen}">${d.name}<small>${key==='easy'?'Спокойный темп':key==='normal'?'Равный соперник':'Быстрые атаки'}</small></button>`).join('')}</div><button id="confirm-new" class="primary">Подготовить схватку</button><button id="cancel-new" class="dialog-secondary">Отмена</button>`,()=>{dialog.querySelectorAll('[data-difficulty]').forEach(b=>b.onclick=()=>{chosen=b.dataset.difficulty;dialog.querySelectorAll('[data-difficulty]').forEach(el=>{el.classList.toggle('selected',el===b);el.setAttribute('aria-pressed',String(el===b));});});$('confirm-new').onclick=()=>{prefs.difficulty=chosen;state=createBattle(chosen);paused=false;selected=-1;hints=[];hintUntil=0;armed=null;lastAction=performance.now();renderer.reset();deployedUntil.clear();accumulator=0;closeDialog();gate();updateHUD();save();$('battle-viewport').scrollIntoView({block:'center',behavior:prefs.motion?'smooth':'instant'});};$('cancel-new').onclick=closeDialog;});}
 function result(){
   if(!state.recorded){const record=read(RECORD,{wins:0,losses:0});record[state.status==='won'?'wins':'losses']++;try{localStorage.setItem(RECORD,JSON.stringify(record));}catch{}state.recorded=true;save();}
   gate();const won=state.status==='won';sound(won?'win':'lost');
@@ -93,16 +139,32 @@ puzzle.addEventListener('pointercancel',()=>{pointer=null;});
 puzzle.addEventListener('keydown',e=>{if(!canPlay()||state.phase)return;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();keyboard=true;const delta={ArrowUp:-8,ArrowDown:8,ArrowLeft:-1,ArrowRight:1}[e.key],next=cursor+delta;if(next>=0&&next<64&&adjacent(cursor,next)){if(selected>=0){moveGems(state,selected,next);selected=-1;hints=[];}cursor=next;}lastAction=performance.now();$('announcer').textContent=`Ряд ${Math.floor(cursor/8)+1}, столбец ${cursor%8+1}, ${GEM_NAMES[state.board[cursor].type]||'Призма'}`;}else if(e.code==='Space'||e.key==='Enter'){e.preventDefault();e.stopPropagation();keyboard=true;choose(cursor);}});
 $('hint').addEventListener('click',()=>{if(!canPlay()||state.phase)return;const moves=legalMoves(state.board);if(moves.length){hints=moves[0];hintUntil=performance.now()+4000;lastAction=performance.now();$('announcer').textContent=`Подсказка: ряд ${Math.floor(hints[0]/8)+1}, столбец ${hints[0]%8+1} и ряд ${Math.floor(hints[1]/8)+1}, столбец ${hints[1]%8+1}.`;}});
 $('shuffle').addEventListener('click',()=>{if(canPlay()&&resetBoard(state)){selected=-1;hints=[];lastAction=performance.now();sound('select');save();updateHUD();}});
-function fieldPoint(e){const r=$('battlefield').getBoundingClientRect();return{x:Math.max(60,Math.min(1140,(e.clientX-r.left)/r.width*1200)),y:Math.max(120,Math.min(255,(e.clientY-r.top)/r.height*400))};}
+function fieldPoint(e) {
+  const r = $('battlefield').getBoundingClientRect();
+  return battlePoint(r.width, r.height, e.clientX - r.left, e.clientY - r.top);
+}
+function revealTarget() {
+  if (!armed) return;
+  const field = $('battlefield'), pan = $('battle-pan');
+  const r = field.getBoundingClientRect();
+  const point = projectBattlePoint(r.width, r.height, armed.x, armed.y);
+  if (point.x < pan.scrollLeft + 70 || point.x > pan.scrollLeft + pan.clientWidth - 70) {
+    pan.scrollTo({left: point.x - pan.clientWidth / 2, behavior: 'instant'});
+  }
+}
 $('battlefield').addEventListener('pointermove',e=>{if(armed)Object.assign(armed,fieldPoint(e));});
 $('battlefield').addEventListener('click',e=>{if(!armed||!canPlay())return;const {x,y}=fieldPoint(e),kind=armed.kind;if(cast(state,0,kind,x,y)){sound('spell');cancelTarget();updateHUD();save();}else toast(kind==='heal'?'В этой области нет повреждённых союзников.':'В этой области нет подходящих целей.');});
-$('battlefield').addEventListener('keydown',e=>{if(!armed||!canPlay())return;if(e.key.startsWith('Arrow')){e.preventDefault();armed.x=Math.max(60,Math.min(1140,armed.x+(e.key==='ArrowLeft'?-40:e.key==='ArrowRight'?40:0)));armed.y=Math.max(120,Math.min(255,armed.y+(e.key==='ArrowUp'?-15:e.key==='ArrowDown'?15:0)));}if(e.key==='Enter'){e.preventDefault();if(cast(state,0,armed.kind,armed.x,armed.y)){cancelTarget();sound('spell');save();updateHUD();}}});
+$('battlefield').addEventListener('keydown',e=>{if(!armed||!canPlay())return;if(e.key.startsWith('Arrow')){e.preventDefault();armed.x=Math.max(60,Math.min(1140,armed.x+(e.key==='ArrowLeft'?-40:e.key==='ArrowRight'?40:0)));armed.y=Math.max(120,Math.min(255,armed.y+(e.key==='ArrowUp'?-15:e.key==='ArrowDown'?15:0)));revealTarget();}if(e.key==='Enter'){e.preventDefault();if(cast(state,0,armed.kind,armed.x,armed.y)){cancelTarget();sound('spell');save();updateHUD();}}});
 document.addEventListener('keydown',e=>{if(dialog.open||['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)||e.repeat)return;const key=e.key.toLowerCase();if(e.key==='Escape'){cancelTarget();selected=-1;}else if(e.code==='Space'&&e.target.tagName!=='BUTTON'){e.preventDefault();pause();}else if(canPlay()){if(/^[1-6]$/.test(key))$(`unit-${purchased[Number(key)-1]}`).click();if(['q','w','e','й','ц','у'].includes(key)){e.preventDefault();const i=['q','w','e'].includes(key)?['q','w','e'].indexOf(key):['й','ц','у'].indexOf(key);arm(['storm','heal','stasis'][i]);}if(['h','р'].includes(key))$('hint').click();if(['r','к'].includes(key))$('shuffle').click();}});
 $('start').onclick=start;$('pause').onclick=pause;$('settings').onclick=settings;$('help').onclick=help;$('new-battle').onclick=newBattle;
 document.addEventListener('visibilitychange',()=>{if(document.hidden){if(state.status==='playing')paused=true;cancelTarget();save();gate();if(context?.state==='running')context.suspend().catch(()=>{});}lastFrame=performance.now();lastAction=performance.now();});
 window.addEventListener('pagehide',save);
 atlas.onload=()=>{$('gem-error').hidden=true;};atlas.onerror=()=>{$('gem-error').hidden=false;};$('retry-gems').onclick=()=>{atlas.src='./assets/gems.webp?retry='+Date.now();};
+unitAtlas.onload=()=>{setUnitAtlas(unitAtlas);drawPortraits();};
+unitAtlas.src='./assets/frontier-units.webp';
 atlas.src='./assets/gems.webp';terrain.src='./assets/frontier.webp';applyPrefs();gate();updateHUD();
+const panObserver = new ResizeObserver(() => { $('field-pan-hint').hidden = $('battle-pan').scrollWidth <= $('battle-pan').clientWidth; });
+panObserver.observe($('battle-pan'));
 function frame(now){
   const dt=Math.min(.1,(now-lastFrame)/1000);lastFrame=now;
   if(canPlay()){

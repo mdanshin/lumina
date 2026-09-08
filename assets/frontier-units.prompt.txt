@@ -1,0 +1,19 @@
+Use case: stylized-concept
+Asset type: one production-ready game sprite atlas for Lumina's Crystal Front RTS, for later cropping into nine unit sprites.
+Primary request: Create ONE exactly square 1536x1536 PNG image with a genuinely transparent alpha background. EXACT uniform 3 columns by 3 rows grid of NINE independent sprites. Every cell is exactly 512x512 pixels. No drawn grid lines, no labels, no text.
+Composition: each sprite entirely confined to its own cell with at least 12% empty padding on every side. All isolated objects centered; full silhouettes visible; no sprite overlaps another cell. Units and buildings have roughly equal image occupancy for later individual scale control. Transparent pixels between all sprites.
+Camera: consistent orthographic three-quarter isometric view seen slightly from above; all subjects face toward the right side of the image.
+Style: polished detailed stylized 3D RTS unit renders, silver and ivory ceramic armor, dark graphite articulated joints, metal edge bevels, emerald teal emissive accents, strong readable silhouettes. Consistent crisp studio illumination, ambient occlusion only on the object forms.
+Top row, left to right:
+1. Light armored rifle infantry scout with compact rifle.
+2. Agile armored swordsman with long luminous energy blade and small shield.
+3. Bulky heavy exosuit infantry with tall tower shield and compact arm cannon.
+Middle row, left to right:
+4. Slender antiair marksman with long twin-barrel railgun and antenna.
+5. Tracked siege artillery vehicle with tank treads and long cannon aiming right.
+6. Swept-wing hovering gunship with two thrusters and bright cockpit, no stand.
+Bottom row, left to right:
+7. Large bipedal assault mech with articulated legs, shoulder rockets, oversized arm cannon.
+8. Squat defensive turret building with armored octagonal foundation, twin cannon and illuminated reactor.
+9. Crystal core base: large floating emerald faceted crystal inside mechanical containment pylons on a hexagonal platform.
+Constraints: exactly nine subjects, exactly 3 by 3 regular cell layout, all objects separate and fully within their cells, preserve genuine background transparency. NO lettering, numbers, logos, labels, grid lines, ground tiles, stands, ground shadows, backdrop or background fill. The foundation platforms specified for the turret and crystal base are parts of those objects; there are no additional terrain bases or floor surfaces.
