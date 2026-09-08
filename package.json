@@ -1,0 +1,50 @@
+{
+  "name": "crystal-front",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Кристальный фронт — тактическая match-3 стратегия для Steam",
+  "main": "desktop/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/*.test.mjs",
+    "dist:win": "electron-builder --win zip --x64",
+    "steam:screenshots": "node scripts/capture-steam-screenshots.mjs",
+    "steam:vdf": "node scripts/prepare-steam-vdf.mjs"
+  },
+  "devDependencies": {
+    "electron": "44.2.0",
+    "electron-builder": "26.15.3",
+    "playwright": "1.63.0"
+  },
+  "build": {
+    "appId": "games.lumina.crystalfront",
+    "productName": "Crystal Front",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "electronLanguages": ["ru", "en-US"],
+    "files": [
+      "desktop/**/*",
+      "battle.html",
+      "battle.css",
+      "battle.js",
+      "battle-*.mjs",
+      "engine.mjs",
+      "assets/favicon.svg",
+      "assets/frontier.webp",
+      "assets/frontier-units.webp",
+      "assets/gems.webp"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "zip",
+          "arch": ["x64"]
+        }
+      ],
+      "artifactName": "CrystalFront-${version}-windows-${arch}.${ext}",
+      "icon": "steam/store-assets/shortcut_icon.png"
+    }
+  }
+}
