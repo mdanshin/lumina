@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#101c1a">
+  <meta name="theme-color" content="#080f19">
   <meta name="description" content="Lumina: Кристальный фронт. Соединяйте кристаллы, создавайте армию и уничтожьте ядро противника в сражении в реальном времени.">
   <title>LUMINA · Кристальный фронт</title>
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="./assets/frontier.webp" as="image">
+  <link rel="preload" href="./assets/frontier-units.webp" as="image">
   <link rel="stylesheet" href="./battle.css">
 </head>
 <body>
@@ -23,29 +24,31 @@
   <main class="command-deck">
     <section class="theater" aria-label="Поле сражения">
       <div class="battle-header">
-        <div class="faction ally"><span class="faction-mark" aria-hidden="true">◇</span><div><span class="micro">ВАШ АЛЬЯНС</span><strong>Стражи рассвета</strong></div><div class="base-meter"><span id="ally-hp">1 250 / 1 250</span><div><i id="ally-bar"></i></div></div></div>
+        <div class="faction ally"><span class="faction-mark" aria-hidden="true">◇</span><div><span class="micro">ВАШ АЛЬЯНС</span><strong>Стражи рассвета</strong></div><div class="base-meter"><span id="ally-hp">1 250 / 1 250</span><span class="tower-readout" id="ally-towers">Башни: 2 / 2</span><div class="hp-track" id="ally-core-meter" role="progressbar" aria-label="Здоровье вашего ядра" aria-valuemin="0" aria-valuemax="1250" aria-valuenow="1250"><i id="ally-bar"></i></div></div></div>
         <div class="match-clock"><span id="match-state" class="micro">СЕКТОР 07 · РАЗЛОМ</span><strong id="clock">00:00</strong><span id="difficulty-label">Командир</span></div>
-        <div class="faction enemy"><span class="faction-mark" aria-hidden="true">⟐</span><div><span class="micro">ПРОТИВНИК · ИИ</span><strong>Багровый легион</strong></div><div class="base-meter"><span id="enemy-hp">1 250 / 1 250</span><div><i id="enemy-bar"></i></div></div></div>
+        <div class="faction enemy"><span class="faction-mark" aria-hidden="true">⟐</span><div><span class="micro">ПРОТИВНИК · ИИ</span><strong>Багровый легион</strong></div><div class="base-meter"><span id="enemy-hp">1 250 / 1 250</span><span class="tower-readout" id="enemy-towers">Башни: 2 / 2</span><div class="hp-track" id="enemy-core-meter" role="progressbar" aria-label="Здоровье вражеского ядра" aria-valuemin="0" aria-valuemax="1250" aria-valuenow="1250"><i id="enemy-bar"></i></div></div></div>
       </div>
       <div class="battle-viewport" id="battle-viewport">
-        <canvas id="battlefield" width="1440" height="480" aria-label="Поле боя. После выбора способности нажмите на нужную область." tabindex="0"></canvas>
+        <div class="battle-pan" id="battle-pan"><div class="battle-world"><canvas id="battlefield" width="1440" height="480" aria-label="Поле боя. На узком экране проведите по нему для обзора. После выбора способности нажмите на нужную область; с клавиатуры используйте стрелки и Enter." tabindex="0"></canvas><div class="field-labels" aria-hidden="true"><span>БАЗА «ЗАРЯ»</span><span>КРИСТАЛЬНЫЙ МОСТ</span><span>БАЗА «РУБЕЖ»</span></div></div></div>
         <div class="battle-topline"><span class="live-dot"></span><span id="battle-caption">ОЖИДАНИЕ КОМАНДИРА</span></div>
         <div class="gate" id="gate"><div class="gate-inner"><span class="micro">ОПЕРАЦИЯ «ПЕРВЫЙ СВЕТ»</span><h1>Кристальный фронт</h1><p id="gate-description">Собирайте энергию. Ведите армию. Уничтожьте вражеское ядро.</p><button id="start" class="primary">Начать бой <span aria-hidden="true">→</span></button><span class="gate-note" id="gate-note">160 энергии на первые подкрепления</span></div></div>
         <div id="target-banner" class="target-banner" hidden><span id="target-label"></span><button id="cancel-target" aria-label="Отменить способность">Отмена ×</button></div>
-        <div class="field-labels" aria-hidden="true"><span>БАЗА «ЗАРЯ»</span><span>КРИСТАЛЬНЫЙ МОСТ</span><span>БАЗА «РУБЕЖ»</span></div>
       </div>
-      <div class="battle-strip"><span><i class="signal-dot"></i><b id="army-ally">2</b> союзников</span><span class="objective">Цель: уничтожить вражеское ядро</span><span><b id="army-enemy">2</b> противников <i class="signal-dot red"></i></span></div>
+      <div class="battle-strip"><span><i class="signal-dot"></i>Армия <b id="army-ally">2</b> / 42</span><span class="objective" id="objective">Уничтожьте две башни, затем вражеское ядро</span><span><b id="army-enemy">2</b> противников <i class="signal-dot red"></i></span></div>
+      <p id="field-pan-hint" class="field-pan-hint" hidden>Проведите по полю боя влево или вправо, чтобы осмотреть фронт.</p>
     </section>
     <div class="command-grid">
       <section class="reactor" aria-labelledby="reactor-title">
         <div class="section-heading"><div><span class="micro">ИСТОЧНИК ЭНЕРГИИ</span><h2 id="reactor-title">Кристальный реактор</h2></div><span id="combo" class="combo">+36 за три кристалла</span></div>
         <div class="reactor-row">
           <div class="puzzle-frame"><canvas id="puzzle" width="640" height="640" tabindex="0" role="application" aria-label="Реактор, поле 8 на 8. Выберите два соседних кристалла или проведите пальцем. Стрелки и пробел для игры с клавиатуры."></canvas><div id="gem-error" class="gem-error" hidden>Не удалось загрузить кристаллы.<button id="retry-gems">Повторить</button></div></div>
-          <div class="reactor-tools"><button id="hint" class="tool" title="Подсказка (H)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6m-5 3h4M8 14a7 7 0 1 1 8 0l-1 3H9l-1-3Z"/></svg><span>Подсказка</span><kbd>H</kbd></button><button id="shuffle" class="tool" title="Перемешать (R)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h3c5 0 7 10 12 10h3m-4-4 4 4-4 4M3 17h3c2 0 3-2 5-5m2-3c2-2 3-2 5-2h3m-4-4 4 4-4 4"/></svg><span id="shuffle-label">Перемешать</span><kbd>R</kbd></button><div class="free-unit"><canvas id="free-portrait" width="90" height="75" aria-hidden="true"></canvas><strong>+1 Искра</strong><span>за комбинацию</span></div></div>
+          <div class="reactor-tools"><button id="hint" class="tool" title="Подсказка (H)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6m-5 3h4M8 14a7 7 0 1 1 8 0l-1 3H9l-1-3Z"/></svg><span>Показать ход</span><kbd>H</kbd></button><button id="shuffle" class="tool" title="Перемешать (R)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h3c5 0 7 10 12 10h3m-4-4 4 4-4 4M3 17h3c2 0 3-2 5-5m2-3c2-2 3-2 5-2h3m-4-4 4 4-4 4"/></svg><span id="shuffle-label">Перемешать</span><kbd>R</kbd></button></div>
         </div>
+        <div class="free-unit"><canvas id="free-portrait" width="96" height="96" aria-hidden="true"></canvas><strong>+36 энергии и +1 Искра</strong><span>за три кристалла</span></div>
+        <p class="reactor-hint">Соединяйте соседние кристаллы. Каскады увеличивают награду.</p>
       </section>
       <section class="arsenal" aria-labelledby="arsenal-title">
-        <div class="energy-header"><div><span class="micro">КОМАНДНЫЙ РЕСУРС</span><h2 id="arsenal-title">Подкрепления</h2></div><div class="energy-display"><span aria-hidden="true">ϟ</span><strong id="energy">160</strong><small>/ 1 200</small><b id="energy-gain"></b></div></div>
+        <div class="energy-header"><div><span class="micro">АРМИЯ И ЭНЕРГИЯ</span><h2 id="arsenal-title">Подкрепления</h2></div><div class="energy-display"><span aria-hidden="true">ϟ</span><strong id="energy">160</strong><small>/ 1 200</small><b id="energy-gain"></b></div></div>
         <div class="energy-track"><i id="energy-bar"></i></div>
         <div id="unit-buttons" class="unit-grid"></div>
         <div class="upgrades"><span class="micro">УЛУЧШЕНИЯ АРМИИ</span><button id="upgrade-attack" title="+20% урона всей армии за уровень"></button><button id="upgrade-armor" title="+18% здоровья всей армии за уровень"></button></div>
@@ -58,7 +61,7 @@
       </section>
     </div>
   </main>
-  <footer class="bottom-bar"><span>LUMINA <b>FRONTIER</b></span><span id="save-status">Схватка сохраняется автоматически</span><span>СОЗДАВАЙТЕ СВЕТ. МЕНЯЙТЕ ХОД БИТВЫ.</span></footer>
+  <footer class="bottom-bar"><span>LUMINA <b>FRONTIER</b></span><span id="save-status">Схватка сохраняется автоматически</span></footer>
   <div id="toast" role="status" aria-live="polite"></div>
   <div class="sr-only" id="announcer" aria-live="polite"></div>
   <dialog id="dialog" aria-labelledby="dialog-title"><button id="dialog-close" class="dialog-close" aria-label="Закрыть">×</button><div id="dialog-content"></div></dialog>
