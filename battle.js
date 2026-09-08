@@ -1,6 +1,6 @@
-import { createBattle, tick, recruit, cast, upgrade, moveGems, resetBoard, serializeBattle, restoreBattle, UNITS, SPELLS, DIFFICULTIES, ENERGY_CAP, LIMIT, armySize, upgradeCost } from './battle-engine.mjs';
+import { createBattle, tick, recruit, cast, upgrade, moveGems, resetBoard, serializeBattle, restoreBattle, UNITS, SPELLS, DIFFICULTIES, ENERGY_CAP, LIMIT, armySize, upgradeCost } from './battle-engine.mjs?v=animation-20260908';
 import { adjacent, legalMoves, GEM_NAMES } from './engine.mjs';
-import { makeRenderer, drawUnit, setUnitAtlas } from './battle-render.mjs';
+import { makeRenderer, drawUnit, setUnitAtlas } from './battle-render.mjs?v=animation-20260908';
 import { battlePoint, projectBattlePoint } from './battle-view.mjs';
 
 const $=id=>document.getElementById(id),fmt=n=>Math.floor(n).toLocaleString('ru-RU');
