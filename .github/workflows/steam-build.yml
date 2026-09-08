@@ -1,0 +1,50 @@
+name: Steam Windows build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - 'steam-v*'
+    paths:
+      - 'assets/**'
+      - 'battle*'
+      - 'desktop/**'
+      - 'engine.mjs'
+      - 'package*.json'
+      - 'scripts/**'
+      - 'steam/**'
+      - '.github/workflows/steam-build.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: python -m pip install pillow
+      - run: python scripts/make-steam-assets.py
+      - run: npx electron-builder --win dir --x64
+      - run: npx playwright install chromium
+      - run: npm run steam:screenshots
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CrystalFront-windows-x64
+          path: dist/win-unpacked/
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CrystalFront-steam-store
+          path: steam/store-assets/
+          if-no-files-found: error
+          retention-days: 30

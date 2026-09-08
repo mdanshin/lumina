@@ -5,6 +5,12 @@ import { battlePoint, projectBattlePoint } from './battle-view.mjs';
 
 const $=id=>document.getElementById(id),fmt=n=>Math.floor(n).toLocaleString('ru-RU');
 const STORAGE='lumina-frontier-v1',PREFS='lumina-frontier-prefs-v1',RECORD='lumina-frontier-record-v1';
+const desktop=window.luminaDesktop?.isSteam===true;
+if(desktop){
+  try{const saved=window.luminaDesktop.loadSave();for(const key of [STORAGE,PREFS,RECORD])if(typeof saved?.[key]==='string')localStorage.setItem(key,saved[key]);}catch{}
+  $('home-link').removeAttribute('href');$('home-link').setAttribute('aria-label','Кристальный фронт');
+  $('back-link').removeAttribute('href');$('back-link').textContent='Выйти';$('back-link').onclick=()=>window.luminaDesktop.quit();
+}
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}};
 const gardenPrefs=read('lumina-gardens-v1',{}).prefs||{};
 const prefs={sfx:true,music:false,motion:!matchMedia('(prefers-reduced-motion: reduce)').matches,autoHints:gardenPrefs.autoHints!==false,difficulty:'normal',...read(PREFS,{})};
@@ -15,6 +21,10 @@ const atlas=new Image(),terrain=new Image(),unitAtlas=new Image(),dialog=$('dial
 const deployedUntil = new Map();
 const renderer=makeRenderer($('battlefield'),$('puzzle'),atlas,terrain);
 let context=null,master=null;
+if(location.hostname==='127.0.0.1'&&new URLSearchParams(location.search).has('steamshots'))window.__crystalFrontCapture=Object.freeze({
+  legalMove:()=>legalMoves(state.board)[0],
+  setEnergy:value=>{state.energy[0]=Math.max(0,Math.min(ENERGY_CAP,Number(value)||0));updateHUD();},
+});
 function sound(name,combo=1){
   if(!prefs.sfx&&name!=='ambient')return;
   if(name==='ambient'&&!prefs.music)return;
@@ -27,7 +37,7 @@ function sound(name,combo=1){
 }
 function toast(text){$('toast').textContent=text;$('toast').classList.add('visible');toastUntil=performance.now()+3400;}
 function save(){
-  try{localStorage.setItem(PREFS,JSON.stringify(prefs));if(!state.phase)localStorage.setItem(STORAGE,serializeBattle(state));$('save-status').textContent='Схватка сохраняется на этом устройстве';}
+  try{localStorage.setItem(PREFS,JSON.stringify(prefs));if(!state.phase)localStorage.setItem(STORAGE,serializeBattle(state));if(desktop)window.luminaDesktop.save(Object.fromEntries([STORAGE,PREFS,RECORD].map(key=>[key,localStorage.getItem(key)])));$('save-status').textContent=desktop?'Схватка сохранена':'Схватка сохраняется на этом устройстве';}
   catch{$('save-status').textContent='Сохранение недоступно: не закрывайте вкладку';}
 }
 function canPlay(){return state.status==='playing'&&!paused&&!dialog.open;}
@@ -128,7 +138,7 @@ function newBattle(){let chosen=state.difficulty;showDialog(`<span class="micro"
 function result(){
   if(!state.recorded){const record=read(RECORD,{wins:0,losses:0});record[state.status==='won'?'wins':'losses']++;try{localStorage.setItem(RECORD,JSON.stringify(record));}catch{}state.recorded=true;save();}
   gate();const won=state.status==='won';sound(won?'win':'lost');
-  showDialog(`<span class="micro">ОПЕРАЦИЯ ЗАВЕРШЕНА</span><h2 id="dialog-title">${won?'Разлом под контролем':state.status==='draw'?'Взаимное уничтожение':'Ядро потеряно'}</h2><p>${won?'Ваши отряды прорвали оборону Багрового легиона. Мост снова принадлежит Стражам рассвета.':'Легион удержал мост. Попробуйте прикрыть осадные пушки бронёй и вовремя сбивать авиацию.'}</p><div class="results-grid"><div><strong>${$('clock').textContent}</strong><span>длительность боя</span></div><div><strong>${fmt(state.stats[0].energy)}</strong><span>энергии добыто</span></div><div><strong>${state.stats[0].kills}</strong><span>врагов уничтожено</span></div><div><strong>×${state.stats[0].maxCombo}</strong><span>лучший каскад</span></div></div><button id="play-again" class="primary">Новая схватка</button><a href="./" class="dialog-secondary">Выбор игры</a>`,()=>{$('play-again').onclick=newBattle;});
+  showDialog(`<span class="micro">ОПЕРАЦИЯ ЗАВЕРШЕНА</span><h2 id="dialog-title">${won?'Разлом под контролем':state.status==='draw'?'Взаимное уничтожение':'Ядро потеряно'}</h2><p>${won?'Ваши отряды прорвали оборону Багрового легиона. Мост снова принадлежит Стражам рассвета.':'Легион удержал мост. Попробуйте прикрыть осадные пушки бронёй и вовремя сбивать авиацию.'}</p><div class="results-grid"><div><strong>${$('clock').textContent}</strong><span>длительность боя</span></div><div><strong>${fmt(state.stats[0].energy)}</strong><span>энергии добыто</span></div><div><strong>${state.stats[0].kills}</strong><span>врагов уничтожено</span></div><div><strong>×${state.stats[0].maxCombo}</strong><span>лучший каскад</span></div></div><button id="play-again" class="primary">Новая схватка</button><a id="result-exit" href="./" class="dialog-secondary">${desktop?'Выйти из игры':'Выбор игры'}</a>`,()=>{$('play-again').onclick=newBattle;if(desktop){$('result-exit').removeAttribute('href');$('result-exit').onclick=()=>window.luminaDesktop.quit();}});
 }
 function cellAt(e){const r=$('puzzle').getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;if(x<0||x>=1||y<0||y>=1)return -1;return Math.floor(y*8)*8+Math.floor(x*8);}
 function choose(i){if(i<0||!canPlay()||state.phase)return;hints=[];lastAction=performance.now();if(selected===i){selected=-1;return;}if(selected>=0&&adjacent(selected,i)){moveGems(state,selected,i);selected=-1;updateHUD();}else{selected=i;sound('select');}}

@@ -1,5 +1,15 @@
 .DS_Store
 node_modules/
+__pycache__/
+*.pyc
+dist/
+.tmp/
+steam/source/
+steam/store-assets/contact-sheet.jpg
+steam/store-assets/*.jpg
+steam/store-assets/*.png
+!steam/store-assets/shortcut_icon.png
+steam/store-assets/screenshots/
 .env*
 !.env.example
 .openai/
