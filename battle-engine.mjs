@@ -121,7 +121,7 @@ export function cast(s, side, kind, x, y) {
 function damage(s, target, amount, side) {
   if (target.hp <= 0) return;
   target.hp = Math.max(0, target.hp - amount);
-  if (target.hp === 0) { event(s, 'destroy', { x: target.x, y: target.y, side: target.side, unit: target.kind }); if (UNITS[target.kind]) s.stats[side].kills++; }
+  if (target.hp === 0) { event(s, 'destroy', { id: target.id, x: target.x, y: target.y, side: target.side, unit: target.kind }); if (UNITS[target.kind]) s.stats[side].kills++; }
 }
 function tickAI(s) {
   const difficulty = DIFFICULTIES[s.difficulty];
@@ -174,7 +174,7 @@ function tickCombat(s, dt) {
         if (u.kind === 'lancer' && targetDef?.air) hit *= 1.7;
         if (u.kind === 'blade' && target.kind === 'mortar') hit *= 1.5;
         damage(s, target, Math.max(2, hit - (targetDef?.armor || 0)), u.side);
-        event(s, 'shot', { x: u.x, y: u.y, tx: target.x, ty: target.y, side: u.side, unit: u.kind, air: def.air });
+        event(s, 'shot', { id: u.id, x: u.x, y: u.y, tx: target.x, ty: target.y, targetId: target.id, targetKind: target.kind, targetAir: !!targetDef?.air, side: u.side, unit: u.kind, air: def.air });
         if (def.splash) for (const v of s.units) if (v !== target && v.hp > 0 && v.side !== u.side && !UNITS[v.kind].air && distance(v, target) < def.splash) damage(s, v, hit * .45, u.side);
       }
     } else {
@@ -191,7 +191,7 @@ function tickCombat(s, dt) {
     const target = s.units.filter(u => u.hp > 0 && u.side !== tower.side && distance(u, tower) < reach).sort((a, b) => distance(a, tower) - distance(b, tower))[0];
     if (target && tower.cooldown <= 0) {
       tower.cooldown = .95; damage(s, target, (tower.kind === 'core' ? 19 : 23) * power, tower.side);
-      event(s, 'shot', { x: tower.x, y: tower.y - 20, tx: target.x, ty: target.y, side: tower.side, unit: 'tower' });
+      event(s, 'shot', { id: tower.id, x: tower.x, y: tower.y, tx: target.x, ty: target.y, targetId: target.id, targetKind: target.kind, targetAir: !!UNITS[target.kind]?.air, side: tower.side, unit: tower.kind });
     }
   }
   s.units = s.units.filter(u => u.hp > 0);
