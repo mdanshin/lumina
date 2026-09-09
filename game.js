@@ -519,7 +519,7 @@ function switchMode(mode) {
 $('sound-button').addEventListener('click', () => { prefs.muted = !prefs.muted; audio.start(); applyPrefs(); save(); toast(prefs.muted ? 'Звук выключен' : 'Звук включён'); });
 $('settings-button').addEventListener('click', settingsModal);
 for (const id of ['help-button', 'guide-button', 'footer-help']) $(id).addEventListener('click', helpModal);
-$('map-button').addEventListener('click', mapModal);
+for (const id of ['map-button', 'map-shortcut']) $(id).addEventListener('click', mapModal);
 $('adventure-mode').addEventListener('click', () => { if (state.mode !== 'adventure') switchMode('adventure'); else mapModal(); });
 $('zen-mode').addEventListener('click', () => { if (state.mode !== 'zen') switchMode('zen'); });
 $('restart-button').addEventListener('click', () => {

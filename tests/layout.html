@@ -7,14 +7,14 @@
 body{margin:0;background:#26302b;color:#edf4e9;font:14px system-ui}header{display:flex;flex-wrap:wrap;align-items:center;gap:20px;padding:16px}select{margin-left:8px;padding:7px;font:inherit}main{padding:0 16px 20px;overflow:auto}iframe{display:block;border:1px solid #768879;background:#101b17;width:390px;height:844px}output{color:#becbbc}
 </style>
 <header>
-  <label>Экран<select id="screen"><option value="390">390 × 844</option><option value="360">360 × 800</option><option value="768">768 × 1024</option><option value="1024">1024 × 900</option><option value="1440">1440 × 1050</option></select></label>
+  <label>Экран<select id="screen"><option value="390">390 × 844</option><option value="360">360 × 800</option><option value="844">844 × 390</option><option value="768">768 × 1024</option><option value="1180">1180 × 820</option><option value="1024">1024 × 900</option><option value="1440">1440 × 1050</option></select></label>
   <label>Игра<select id="game"><option value="../">Выбор игры</option><option value="../battle.html">Кристальный фронт</option><option value="../gardens.html">Сады вечного света</option></select></label>
   <output id="dimensions">390 × 844</output>
 </header>
 <main><iframe id="preview" title="Игра в выбранном размере" src="../"></iframe></main>
 <script>
 const preview=document.getElementById('preview'),screen=document.getElementById('screen'),game=document.getElementById('game');
-screen.onchange=()=>{const h={360:800,390:844,768:1024,1024:900,1440:1050}[screen.value];preview.style.width=screen.value+'px';preview.style.height=h+'px';document.getElementById('dimensions').textContent=screen.value+' × '+h;};
+screen.onchange=()=>{const h={360:800,390:844,844:390,768:1024,1180:820,1024:900,1440:1050}[screen.value];preview.style.width=screen.value+'px';preview.style.height=h+'px';document.getElementById('dimensions').textContent=screen.value+' × '+h;};
 game.onchange=()=>{preview.src=game.value;};
 </script>
 </html>
