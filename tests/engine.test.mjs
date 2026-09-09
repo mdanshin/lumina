@@ -79,3 +79,15 @@ test('1200 legal moves and their cascades settle without corrupting the board', 
   }
   assert.ok(count >= 1200);
 });
+
+test('frost patterns keep the exact count and follow each world', () => {
+  for (const chapter of [0, 1, 2]) for (const count of [0, 1, 6, 13, 24, 30]) {
+    const frost = createFrost(count, rng, chapter);
+    assert.equal(frost.length, 64); assert.equal(frost.reduce((a, b) => a + b), count);
+  }
+  const ruins = createFrost(24, rng, 1), edge = i => { const r = i / 8 | 0, c = i % 8; return r === 0 || r === 7 || c === 0 || c === 7 || c === 3 || c === 4; };
+  assert.ok(ruins.filter((v, i) => v && edge(i)).length >= 18);
+  const stars = createFrost(24, rng, 2);
+  for (let i = 0; i < 64; i++) assert.equal(stars[i], stars[i - i % 8 + 7 - i % 8]);
+  const odd = createFrost(7, rng, 2); assert.equal(odd.reduce((a, b) => a + b), 7);
+});

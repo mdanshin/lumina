@@ -7,7 +7,7 @@ const fmt = n => Math.floor(n).toLocaleString('ru-RU');
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const wait = ms => new Promise(r => setTimeout(r, prefs.motion ? ms : Math.min(ms, 40)));
 const STORAGE = 'lumina-gardens-v1';
-const defaults = () => ({ version: 1, unlocked: 1, completed: {}, sessions: {}, mode: 'adventure', zenBest: 0, prefs: { muted: false, sfx: true, music: true, motion: !matchMedia('(prefers-reduced-motion: reduce)').matches, autoHints: true }, seen: false });
+const defaults = () => ({ version: 1, unlocked: 1, completed: {}, sessions: {}, mode: 'adventure', zenBest: 0, visited: [0], prefs: { muted: false, sfx: true, music: true, motion: !matchMedia('(prefers-reduced-motion: reduce)').matches, autoHints: true }, seen: false });
 let profile = defaults(), storageAvailable = true;
 try {
   const stored = JSON.parse(localStorage.getItem(STORAGE));
@@ -17,6 +17,7 @@ try {
     if (!profile.completed || typeof profile.completed !== 'object') profile.completed = {};
     if (!profile.sessions || typeof profile.sessions !== 'object') profile.sessions = {};
     if (!['adventure', 'zen'].includes(profile.mode)) profile.mode = 'adventure';
+    if (!Array.isArray(profile.visited)) profile.visited = [0];
   }
 } catch { storageAvailable = false; }
 const prefs = profile.prefs;
@@ -27,6 +28,12 @@ const canvas = $('board'), ctx = canvas.getContext('2d', { alpha: true });
 const atlas = new Image();
 let atlasReady = false;
 const SIZE = 640, CELL = 80;
+// Палитра поля для каждого мира: клетки, преграда (лёд, песок, пыль) и её узор.
+const THEMES = [
+  { cellA: '#163b403b', cellB: '#20505830', grid: '#90c8bf10', frostFill: '#a2d9f220', frostLine: '#b5effb65', frostMark: '#c4f1ff55', chrome: '#071d25' },
+  { cellA: '#4a331b3f', cellB: '#5f452534', grid: '#e6b97c14', frostFill: '#e6bd7a2c', frostLine: '#f0cd8a72', frostMark: '#ffe2a866', chrome: '#1b120a' },
+  { cellA: '#2b254f3f', cellB: '#3b306a34', grid: '#bcaaff14', frostFill: '#c8b9ff24', frostLine: '#dacdff6c', frostMark: '#efe7ff66', chrome: '#0c0a22' },
+];
 const point = index => ({ x: ((index % 8 + 8) % 8) * CELL + CELL / 2, y: Math.floor(index / 8) * CELL + CELL / 2 });
 const ease = p => 1 - Math.pow(1 - clamp(p, 0, 1), 3);
 
@@ -104,7 +111,7 @@ function validSession(s, mode) {
 }
 function freshState(level, mode) {
   const config = levelConfig(level);
-  return { level, mode, config, board: createBoard(), frost: createFrost(mode === 'zen' ? 0 : config.frost), moves: mode === 'zen' ? -1 : config.moves, score: 0, collected: Array(6).fill(0), ice: 0, boosters: { hammer: 3, shuffle: 2 }, status: 'playing', turns: 0, bestCascade: 0 };
+  return { level, mode, config, board: createBoard(), frost: createFrost(mode === 'zen' ? 0 : config.frost, Math.random, config.chapter), moves: mode === 'zen' ? -1 : config.moves, score: 0, collected: Array(6).fill(0), ice: 0, boosters: { hammer: 3, shuffle: 2 }, status: 'playing', turns: 0, bestCascade: 0 };
 }
 function loadGame(mode = 'adventure', level = null) {
   epoch++; busy = false; armed = false; selected = -1; cursor = 0; particles = []; rings = []; beams = []; labels = []; moving.clear(); vanishing.clear(); hinted = [];
@@ -115,14 +122,27 @@ function loadGame(mode = 'adventure', level = null) {
   if (state.status === 'playing' && (findGroups(state.board).length || !legalMoves(state.board).length)) shuffleBoard(state.board);
   profile.mode = mode; document.body.classList.toggle('zen-mode', mode === 'zen');
   if ($('modal').open) $('modal').close();
-  lastAction = performance.now(); updateHUD(); updateJourney(); save();
+  lastAction = performance.now(); updateHUD(); updateJourney();
+  const fresh = state.status === 'playing' && state.turns === 0;
+  if (mode === 'adventure' && fresh && !profile.visited.includes(state.config.chapter)) { profile.visited.push(state.config.chapter); setTimeout(() => chapterModal(state.config.chapter), 350); }
+  save();
   if (state.status === 'won') setTimeout(() => resultModal(true), 150);
   else if (state.status === 'lost') setTimeout(() => resultModal(false), 150);
+}
+let shownChapter = null, veilTimer = 0;
+// Смена мира: короткое затемнение, новая палитра страницы и цвет системной панели.
+function applyChapter(chapter) {
+  if (shownChapter === chapter) return;
+  const first = shownChapter === null; shownChapter = chapter;
+  const swap = () => { document.body.dataset.chapter = String(chapter); document.querySelector('meta[name="theme-color"]').setAttribute('content', THEMES[chapter].chrome); };
+  if (first || !prefs.motion) { swap(); return; }
+  clearTimeout(veilTimer); $('veil').classList.add('on');
+  veilTimer = setTimeout(() => { swap(); $('veil').classList.remove('on'); }, 420);
 }
 function updateHUD() {
   const { mode, config, score, moves, collected } = state, zen = mode === 'zen';
   const chapter = CHAPTERS[config.chapter];
-  document.body.dataset.chapter = String(config.chapter);
+  applyChapter(config.chapter);
   $('chapter-label').textContent = zen ? 'БЕЗ СПЕШКИ. БЕЗ ГРАНИЦ.' : `ГЛАВА ${chapter.numeral}`;
   $('chapter-title').textContent = zen ? 'В потоке света' : chapter.name;
   $('chapter-subtitle').textContent = zen ? 'Пусть весь мир немного подождёт' : chapter.subtitle;
@@ -142,8 +162,8 @@ function updateHUD() {
   $('goals').innerHTML = zen ? `<div class="zen-goal">${icon('infinity')}<span>Без целей<br>Без спешки</span></div>` : config.goals.map(g => {
     const value = Math.min(collected[g.type], g.target), done = value >= g.target;
     return `<div class="goal ${done ? 'done' : ''}" aria-label="${GEM_NAMES[g.type]}: ${value} из ${g.target}">${gem(g.type)}<div class="goal-track"><span class="goal-amount">${done ? icon('check') : value}<small> / ${g.target}</small></span><div class="goal-mini-track"><i style="width:${value / g.target * 100}%"></i></div></div></div>`;
-  }).join('') + (config.frost ? `<div class="goal frost ${state.ice >= config.frost ? 'done' : ''}" aria-label="Лёд: ${state.ice} из ${config.frost}"><span class="goal-symbol">${icon('snow')}</span><span class="goal-amount">${state.ice >= config.frost ? icon('check') : state.ice}<small> / ${config.frost}</small></span></div>` : '');
-  $('goal-note').innerHTML = zen ? 'Следуйте за сиянием.<br>Усилители не заканчиваются.' : config.frost ? 'Собирайте комбинации<br>на клетках со льдом.' : 'Соберите кристаллы<br>и наполните сады светом.';
+  }).join('') + (config.frost ? `<div class="goal frost ${state.ice >= config.frost ? 'done' : ''}" aria-label="${chapter.frostName}: ${state.ice} из ${config.frost}"><span class="goal-symbol">${icon(chapter.frostIcon)}</span><span class="goal-amount">${state.ice >= config.frost ? icon('check') : state.ice}<small> / ${config.frost}</small></span></div>` : '');
+  $('goal-note').innerHTML = zen ? 'Следуйте за сиянием.<br>Усилители не заканчиваются.' : config.frost ? chapter.frostNote : 'Соберите кристаллы<br>и наполните сады светом.';
   $('hammer-count').textContent = zen ? '∞' : state.boosters.hammer;
   $('shuffle-count').textContent = zen ? '∞' : state.boosters.shuffle;
   $('hammer-button').disabled = busy || state.status !== 'playing' || (!zen && state.boosters.hammer <= 0);
@@ -158,6 +178,7 @@ function updateHUD() {
 function updateJourney() {
   const chapter = CHAPTERS[state.config.chapter];
   $('journey-chapter').textContent = chapter.name;
+  document.querySelector('.journey-chapter>svg use').setAttribute('href', `#i-${chapter.emblem}`);
   let start = Math.max(1, Math.min(26, state.level - 2));
   if (state.level <= 3) start = 1;
   $('level-path').innerHTML = Array.from({ length: 5 }, (_, j) => {
@@ -222,11 +243,20 @@ function render(now) {
   ctx.setTransform(canvas.width / SIZE, 0, 0, canvas.height / SIZE, 0, 0); ctx.clearRect(0, 0, SIZE, SIZE);
   for (let i = 0; i < 64; i++) {
     const { x, y } = point(i), r = i / 8 | 0, c = i % 8;
+    const theme = THEMES[state.config.chapter] || THEMES[0];
     rounded(x - 38, y - 38, 76, 76, 9);
-    ctx.fillStyle = (r + c) % 2 ? '#163b403b' : '#20505830'; ctx.fill(); ctx.strokeStyle = '#90c8bf10'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = (r + c) % 2 ? theme.cellA : theme.cellB; ctx.fill(); ctx.strokeStyle = theme.grid; ctx.lineWidth = 1; ctx.stroke();
     if (state.frost[i]) {
-      rounded(x - 37, y - 37, 74, 74, 8); ctx.fillStyle = '#a2d9f220'; ctx.fill(); ctx.strokeStyle = '#b5effb65'; ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(x - 36, y - 18); ctx.lineTo(x - 18, y - 25); ctx.lineTo(x - 9, y - 36); ctx.moveTo(x + 12, y + 36); ctx.lineTo(x + 19, y + 19); ctx.lineTo(x + 36, y + 8); ctx.strokeStyle = '#c4f1ff55'; ctx.lineWidth = 1.3; ctx.stroke();
+      rounded(x - 37, y - 37, 74, 74, 8); ctx.fillStyle = theme.frostFill; ctx.fill(); ctx.strokeStyle = theme.frostLine; ctx.stroke();
+      ctx.beginPath(); ctx.strokeStyle = theme.frostMark; ctx.lineWidth = 1.3;
+      if (state.config.chapter === 1) {
+        ctx.moveTo(x - 36, y - 12); ctx.lineTo(x - 16, y - 9); ctx.lineTo(x - 8, y + 4); ctx.moveTo(x + 36, y + 12); ctx.lineTo(x + 18, y + 15); ctx.lineTo(x + 9, y + 30); ctx.moveTo(x - 22, y + 36); ctx.lineTo(x - 17, y + 20);
+      } else if (state.config.chapter === 2) {
+        for (const [sx, sy, r] of [[-21, -20, 4.5], [18, -25, 3], [24, 19, 4.5], [-19, 23, 3]]) { ctx.moveTo(x + sx - r, y + sy); ctx.lineTo(x + sx + r, y + sy); ctx.moveTo(x + sx, y + sy - r); ctx.lineTo(x + sx, y + sy + r); }
+      } else {
+        ctx.moveTo(x - 36, y - 18); ctx.lineTo(x - 18, y - 25); ctx.lineTo(x - 9, y - 36); ctx.moveTo(x + 12, y + 36); ctx.lineTo(x + 19, y + 19); ctx.lineTo(x + 36, y + 8);
+      }
+      ctx.stroke();
     }
     if (i === selected || (hinted.includes(i) && now < hintUntil) || (keyboardFocus && i === cursor)) {
       const hint = i !== selected;
@@ -456,7 +486,7 @@ dialog.addEventListener('click', e => { if (e.target === dialog) { const r = dia
 dialog.addEventListener('close', () => { lastAction = performance.now(); if (state?.status === 'playing') canvas.focus({ preventScroll: true }); });
 function helpModal() {
   audio.start();
-  modal(`<p class="modal-eyebrow">СЕКРЕТЫ МАГИИ</p><h2 class="modal-title" id="modal-title">Свет в ваших руках</h2><p class="modal-description">Несколько простых правил — бесконечно много красивых комбинаций.</p><div class="guide-steps"><div class="guide-step"><span class="guide-number">1</span><div><h3>Меняйте и соединяйте</h3><p>Нажмите на два соседних кристалла или проведите пальцем. Три одинаковых в ряд исчезнут. Обмен без комбинации не тратит ход.</p></div></div><div class="guide-step"><span class="guide-number">2</span><div><h3>Наполняйте сады светом</h3><p>Соберите нужные кристаллы и наберите указанное количество света, пока есть ходы. Начиная с 4-го уровня, убирайте лёд комбинациями на замёрзших клетках.</p></div></div><div class="guide-step"><span class="guide-number">3</span><div><h3>Создавайте особые кристаллы</h3><p>Длинные комбинации рождают усилители. Активируйте их в новой комбинации или соедините два усилителя друг с другом.</p></div></div></div><div class="guide-specials"><div class="special-info"><span>↔</span><strong>4 в ряд · Луч</strong><p>Очищает целый ряд<br>или столбец.</p></div><div class="special-info"><span>✦</span><strong>Т или Г · Нова</strong><p>Взрывает область<br>3 × 3 клетки.</p></div><div class="special-info"><span>✧</span><strong>5 в ряд · Призма</strong><p>Убирает все камни<br>выбранного цвета.</p></div></div><div class="keyboard-info">Подсказка бесплатна. Искра и Вихрь не тратят ходы; их запас обновляется на каждом уровне. Оставшиеся ходы дают по 120 света.<br><br>Клавиатура: стрелки — клетка, пробел — выбор, затем стрелка — обмен. H — подсказка, 1 — Искра, 2 — Вихрь, Esc — отмена.</div><div class="modal-actions"><button class="primary-button" id="help-play">Пусть начнётся магия ${icon('arrow')}</button></div>`, () => $('help-play').addEventListener('click', closeModal));
+  modal(`<p class="modal-eyebrow">СЕКРЕТЫ МАГИИ</p><h2 class="modal-title" id="modal-title">Свет в ваших руках</h2><p class="modal-description">Несколько простых правил — бесконечно много красивых комбинаций.</p><div class="guide-steps"><div class="guide-step"><span class="guide-number">1</span><div><h3>Меняйте и соединяйте</h3><p>Нажмите на два соседних кристалла или проведите пальцем. Три одинаковых в ряд исчезнут. Обмен без комбинации не тратит ход.</p></div></div><div class="guide-step"><span class="guide-number">2</span><div><h3>Наполняйте сады светом</h3><p>Соберите нужные кристаллы и наберите указанное количество света, пока есть ходы. Начиная с 4-го уровня, убирайте преграды комбинациями на закрытых клетках: в садах это лёд, в руинах — песок вдоль стен и колонн, в обители — звёздная пыль, лежащая зеркальными созвездиями.</p></div></div><div class="guide-step"><span class="guide-number">3</span><div><h3>Создавайте особые кристаллы</h3><p>Длинные комбинации рождают усилители. Активируйте их в новой комбинации или соедините два усилителя друг с другом.</p></div></div></div><div class="guide-specials"><div class="special-info"><span>↔</span><strong>4 в ряд · Луч</strong><p>Очищает целый ряд<br>или столбец.</p></div><div class="special-info"><span>✦</span><strong>Т или Г · Нова</strong><p>Взрывает область<br>3 × 3 клетки.</p></div><div class="special-info"><span>✧</span><strong>5 в ряд · Призма</strong><p>Убирает все камни<br>выбранного цвета.</p></div></div><div class="keyboard-info">Подсказка бесплатна. Искра и Вихрь не тратят ходы; их запас обновляется на каждом уровне. Оставшиеся ходы дают по 120 света.<br><br>Клавиатура: стрелки — клетка, пробел — выбор, затем стрелка — обмен. H — подсказка, 1 — Искра, 2 — Вихрь, Esc — отмена.</div><div class="modal-actions"><button class="primary-button" id="help-play">Пусть начнётся магия ${icon('arrow')}</button></div>`, () => $('help-play').addEventListener('click', closeModal));
 }
 function settingsModal() {
   audio.start();
@@ -478,15 +508,31 @@ function applyPrefs() {
   if (!prefs.motion) { particles = []; rings = []; beams = []; }
   if (audio.master && audio.context) audio.master.gain.setTargetAtTime(prefs.muted ? 0 : .36, audio.context.currentTime, .08);
 }
+function chapterCard(chapter, c, current) {
+  const first = c * 10 + 1, done = Array.from({ length: 10 }, (_, i) => profile.completed[first + i]).filter(Boolean);
+  const stars = done.reduce((sum, l) => sum + (l.stars || 0), 0);
+  const locked = profile.unlocked < first, complete = done.length === 10;
+  const status = locked ? `${icon('lock')} Откроется после мира «${CHAPTERS[c - 1].name}»` : complete ? `${icon('check')} Мир пройден` : current ? '✦ Вы здесь' : `${icon('play')} Открыт`;
+  return `<section class="world-map world-${c} ${locked ? 'locked' : ''} ${current ? 'current' : ''}" style="--world:${chapter.color}"><div class="world-art"><i></i><i></i><i></i>${icon(chapter.emblem)}</div><div class="world-body"><div class="world-map-title"><div><h3>${chapter.name}</h3><p>${chapter.subtitle}</p></div><span>ГЛАВА ${chapter.numeral}</span></div><p class="world-lead">${chapter.lead}</p><div class="world-rule">${icon(chapter.frostIcon)}<span>${chapter.rule}</span></div><ul class="world-traits">${chapter.traits.map(t => `<li>${t}</li>`).join('')}</ul><div class="world-status">${status}</div>${locked ? '' : `<div class="world-progress" role="img" aria-label="${done.length} из 10 уровней, ${stars} из 30 звёзд"><i style="width:${done.length * 10}%"></i></div><div class="world-stars"><span>${done.length} / 10 уровней</span><span>${icon('star')} ${stars} / 30</span></div><div class="world-levels">${Array.from({ length: 10 }, (_, i) => {
+    const n = first + i, result = profile.completed[n], here = state.mode === 'adventure' && state.level === n;
+    return `<button class="map-level ${here ? 'current' : ''} ${result ? 'passed' : ''}" data-map-level="${n}" ${n > profile.unlocked ? 'disabled' : ''} aria-label="Уровень ${n}${result ? ', звёзд: ' + result.stars : n > profile.unlocked ? ', закрыт' : ''}">${n > profile.unlocked ? icon('lock') : n}<small>${result ? '★'.repeat(result.stars) + '☆'.repeat(3 - result.stars) : ''}</small></button>`;
+  }).join('')}</div>`}</div></section>`;
+}
 function mapModal() {
   audio.start();
   const stars = Object.values(profile.completed).reduce((sum, l) => sum + (l.stars || 0), 0);
-  modal(`<p class="modal-eyebrow">ВАШЕ ПУТЕШЕСТВИЕ</p><h2 class="modal-title" id="modal-title">Три мира. Один свет.</h2><div class="journey-total">${icon('star')} ${stars} / 90 звёзд <span>·</span> ${Object.keys(profile.completed).length} / 30 уровней</div><div class="worlds">${CHAPTERS.map((chapter, c) => `<section class="world-map ${profile.unlocked < c * 10 + 1 ? 'locked' : ''}"><div class="world-map-title"><h3>${chapter.name}</h3><span>ГЛАВА ${chapter.numeral}</span></div><div class="world-levels">${Array.from({ length: 10 }, (_, i) => {
-    const n = c * 10 + i + 1, done = profile.completed[n];
-    return `<button class="map-level ${state.mode === 'adventure' && state.level === n ? 'current' : ''}" data-map-level="${n}" ${n > profile.unlocked ? 'disabled' : ''} aria-label="Уровень ${n}${done ? ', звёзд: ' + done.stars : n > profile.unlocked ? ', закрыт' : ''}">${n > profile.unlocked ? icon('lock') : n}<small>${done ? '★'.repeat(done.stars) + '☆'.repeat(3 - done.stars) : ''}</small></button>`;
-  }).join('')}</div></section>`).join('')}</div><div class="modal-actions"><button class="secondary-button" id="map-zen">${icon('leaf')} Отдохнуть в режиме дзен</button></div>`, () => {
+  const current = state.mode === 'adventure' ? state.config.chapter : -1;
+  modal(`<p class="modal-eyebrow">ВАШЕ ПУТЕШЕСТВИЕ</p><h2 class="modal-title" id="modal-title">Три мира. Один свет.</h2><p class="modal-description">Каждый мир живёт по своим законам: меняются свет, преграды на поле и цена победы.</p><div class="journey-total">${icon('star')} ${stars} / 90 звёзд <span>·</span> ${Object.keys(profile.completed).length} / 30 уровней</div><div class="worlds">${CHAPTERS.map((chapter, c) => chapterCard(chapter, c, c === current)).join('')}</div><div class="modal-actions"><button class="secondary-button" id="map-zen">${icon('leaf')} Отдохнуть в режиме дзен</button></div>`, () => {
     $('modal-body').querySelectorAll('[data-map-level]').forEach(b => b.addEventListener('click', () => chooseLevel(Number(b.dataset.mapLevel))));
     $('map-zen').addEventListener('click', () => switchMode('zen'));
+    $('modal-body').querySelector('.world-map.current')?.scrollIntoView({ block: 'nearest' });
+  });
+}
+// Вход в новый мир: чем он живёт и что изменилось на поле.
+function chapterModal(c) {
+  const chapter = CHAPTERS[c];
+  modal(`<div class="chapter-intro world-${c}" style="--world:${chapter.color}"><div class="world-art"><i></i><i></i><i></i>${icon(chapter.emblem)}</div><p class="modal-eyebrow">ГЛАВА ${chapter.numeral} · ${c ? 'НОВЫЙ МИР' : 'НАЧАЛО ПУТИ'}</p><h2 class="modal-title" id="modal-title">${chapter.name}</h2><p class="modal-description">${chapter.subtitle}</p><p class="world-lead">${chapter.lead}</p><div class="world-rule">${icon(chapter.frostIcon)}<span>${chapter.rule}</span></div><ul class="world-traits">${chapter.traits.map(t => `<li>${t}</li>`).join('')}</ul><div class="modal-actions"><button class="primary-button" id="chapter-enter">Войти в мир ${icon('arrow')}</button></div></div>`, () => {
+    $('chapter-enter').addEventListener('click', closeModal);
   });
 }
 function chooseLevel(n) {
@@ -505,7 +551,7 @@ function resultModal(won) {
   if (zen) return;
   const resultStars = Array.from({ length: 3 }, (_, i) => icon('star', won && i < state.stars ? 'earned' : '')).join('');
   const title = complete ? 'Сады снова сияют' : won ? 'Вы пробудили свет!' : 'Свет ещё вернётся';
-  modal(`<p class="modal-eyebrow">${complete ? 'ПУТЕШЕСТВИЕ ЗАВЕРШЕНО' : `УРОВЕНЬ ${state.level} ${won ? 'ПРОЙДЕН' : '· ХОДЫ ЗАКОНЧИЛИСЬ'}`}</p><h2 class="modal-title" id="modal-title">${title}</h2><p class="modal-description">${complete ? 'Все 30 уровней позади. Спасибо, что вернули магию в эти миры.' : won ? 'Ещё один уголок древних садов наполнен магией.' : 'У каждого сада свой секрет. Попробуйте новый путь.'}</p>${won ? `<div class="result-stars">${resultStars}</div>` : `<div class="result-icon">${icon('restart')}</div>`}<div class="result-stats"><div><strong>${fmt(state.score)}</strong><span>собрано света</span></div><div><strong>${won ? '+' + fmt(state.bonus || 0) : state.bestCascade || 1}</strong><span>${won ? 'бонус за оставшиеся ходы' : 'лучший каскад'}</span></div></div>${won ? `<p class="result-award">${complete ? '<strong>Вы — хранитель вечного света.</strong><br>Соберите все 90 звёзд или растворитесь в режиме дзен.' : 'Впереди — новая магия.<br><strong>Следующий уровень открыт.</strong>'}</p>` : `<div class="objective-summary">${state.config.goals.map(g => `<span>${gem(g.type)} ${Math.min(g.target, state.collected[g.type])} / ${g.target}</span>`).join('')}${state.config.frost ? `<span>${icon('snow')} ${state.ice} / ${state.config.frost}</span>` : ''}</div><p class="result-award">${state.score < state.config.target ? `Для победы нужно ${fmt(state.config.target)} света и все цели.` : 'Света достаточно — осталось собрать все цели.'}<br>Искра и Вихрь помогут. Они не тратят ходы.</p>`}<div class="modal-actions"><button class="primary-button" id="result-next">${complete ? 'Отдохнуть в режиме дзен' : won ? 'Следующий уровень' : 'Попробовать снова'} ${icon('arrow')}</button><button class="secondary-button" id="result-map">${icon('map')} Карта миров</button>${won ? '<button class="secondary-button" id="result-replay">Переиграть уровень</button>' : ''}</div>`, () => {
+  modal(`<p class="modal-eyebrow">${complete ? 'ПУТЕШЕСТВИЕ ЗАВЕРШЕНО' : `УРОВЕНЬ ${state.level} ${won ? 'ПРОЙДЕН' : '· ХОДЫ ЗАКОНЧИЛИСЬ'}`}</p><h2 class="modal-title" id="modal-title">${title}</h2><p class="modal-description">${complete ? 'Все 30 уровней позади. Спасибо, что вернули магию в эти миры.' : won ? 'Ещё один уголок древних садов наполнен магией.' : 'У каждого сада свой секрет. Попробуйте новый путь.'}</p>${won ? `<div class="result-stars">${resultStars}</div>` : `<div class="result-icon">${icon('restart')}</div>`}<div class="result-stats"><div><strong>${fmt(state.score)}</strong><span>собрано света</span></div><div><strong>${won ? '+' + fmt(state.bonus || 0) : state.bestCascade || 1}</strong><span>${won ? 'бонус за оставшиеся ходы' : 'лучший каскад'}</span></div></div>${won ? `<p class="result-award">${complete ? '<strong>Вы — хранитель вечного света.</strong><br>Соберите все 90 звёзд или растворитесь в режиме дзен.' : 'Впереди — новая магия.<br><strong>Следующий уровень открыт.</strong>'}</p>` : `<div class="objective-summary">${state.config.goals.map(g => `<span>${gem(g.type)} ${Math.min(g.target, state.collected[g.type])} / ${g.target}</span>`).join('')}${state.config.frost ? `<span>${icon(CHAPTERS[state.config.chapter].frostIcon)} ${state.ice} / ${state.config.frost}</span>` : ''}</div><p class="result-award">${state.score < state.config.target ? `Для победы нужно ${fmt(state.config.target)} света и все цели.` : 'Света достаточно — осталось собрать все цели.'}<br>Искра и Вихрь помогут. Они не тратят ходы.</p>`}<div class="modal-actions"><button class="primary-button" id="result-next">${complete ? 'Отдохнуть в режиме дзен' : won ? 'Следующий уровень' : 'Попробовать снова'} ${icon('arrow')}</button><button class="secondary-button" id="result-map">${icon('map')} Карта миров</button>${won ? '<button class="secondary-button" id="result-replay">Переиграть уровень</button>' : ''}</div>`, () => {
     $('result-next').addEventListener('click', () => { audio.start(); if (complete) switchMode('zen'); else loadGame('adventure', won ? state.level + 1 : state.level); });
     $('result-map').addEventListener('click', mapModal);
     if ($('result-replay')) $('result-replay').addEventListener('click', () => loadGame('adventure', state.level));
@@ -536,4 +582,4 @@ atlas.onload = () => { atlasReady = true; $('board-loading').classList.add('load
 atlas.onerror = () => { $('board-loading').innerHTML = '<p>Не удалось загрузить кристаллы.</p><button class="primary-button" id="reload-assets">Попробовать ещё раз</button>'; $('reload-assets').addEventListener('click', () => { atlas.src = './assets/gems.webp?retry=' + Date.now(); }); };
 atlas.src = './assets/gems.webp';
 applyPrefs(); loadGame(profile.mode); resizeCanvas(); requestAnimationFrame(render);
-if (!profile.seen) { profile.seen = true; save(); setTimeout(() => toast('Добро пожаловать в Лунные сады. Соедините три одинаковых кристалла.'), 1100); }
+if (!profile.seen) { profile.seen = true; save(); if (!$('modal').open) setTimeout(() => toast('Добро пожаловать в Лунные сады. Соедините три одинаковых кристалла.'), 1100); }
