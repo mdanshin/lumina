@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="900" viewBox="0 0 760 900">
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#081829"/><stop offset="1" stop-color="#12312e"/></linearGradient>
+    <radialGradient id="halo"><stop stop-color="#86e8cd" stop-opacity=".24"/><stop offset="1" stop-color="#86e8cd" stop-opacity="0"/></radialGradient>
+    <linearGradient id="silk" x1="0" x2=".8" y2="1"><stop stop-color="#b4bfff" stop-opacity="0"/><stop offset=".55" stop-color="#57caae" stop-opacity=".09"/><stop offset="1" stop-color="#c0f2dd" stop-opacity=".6"/></linearGradient>
+    <linearGradient id="crystal" x2=".8" y2="1"><stop stop-color="#c4f5e6"/><stop offset=".42" stop-color="#7ac9c2" stop-opacity=".65"/><stop offset="1" stop-color="#436c9b" stop-opacity=".23"/></linearGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="11"/></filter>
+    <g id="tile"><rect width="50" height="50" rx="2" fill="url(#crystal)" stroke="#b9f1e4" stroke-opacity=".8"/><path d="M2 48V2h46" fill="none" stroke="#fff" stroke-opacity=".6"/><rect x="11" y="11" width="28" height="28" fill="none" stroke="#b3eddf" stroke-opacity=".35"/></g>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h760v900H0z"/>
+  <ellipse cx="400" cy="340" rx="400" ry="370" fill="url(#halo)"/>
+  <g fill="url(#silk)">
+    <path d="M-80-70C190 530 390-180 850 170v95C390-80 190 630-80 160Z"/>
+    <path d="M-90-10C240 500 410-200 860 170v115C410-90 240 610-90 140Z" opacity=".5"/>
+    <path d="M-70 140C200 430 560-140 860 270v55C540 20 200 580-70 280Z" opacity=".4"/>
+  </g>
+  <path d="M-80 160C190 630 390-80 850 265" stroke="#92f0c7" stroke-width="4" fill="none" opacity=".22" filter="url(#blur)"/>
+  <g fill="none" stroke="#bbebde" stroke-opacity=".17"><circle cx="392" cy="320" r="168"/><circle cx="392" cy="320" r="182" stroke-opacity=".07"/><ellipse cx="392" cy="320" rx="234" ry="62" transform="rotate(-32 392 320)" stroke-opacity=".12"/></g>
+  <g transform="translate(308 249) rotate(-8 80 55)"><g filter="url(#blur)" opacity=".7"><use href="#tile" x="56"/><use href="#tile" y="56"/><use href="#tile" x="56" y="56"/><use href="#tile" x="112" y="56"/></g><use href="#tile" x="56"/><use href="#tile" y="56"/><use href="#tile" x="56" y="56"/><use href="#tile" x="112" y="56"/></g>
+  <g fill="#d9f5ed"><circle cx="146" cy="92" r="1.6"/><circle cx="559" cy="151" r="2"/><circle cx="238" cy="225" r="1"/><circle cx="102" cy="314" r="1.4"/><circle cx="612" cy="364" r="1.4"/><circle cx="486" cy="425" r="2"/><circle cx="214" cy="452" r="1"/><circle cx="420" cy="99" r="1"/><circle cx="684" cy="196" r="1"/><circle cx="671" cy="492" r="1.6"/><circle cx="318" cy="143" r="1"/><circle cx="70" cy="437" r="1"/><circle cx="518" cy="258" r="1"/></g>
+  <path d="m0 636 69-64 45 28 56-91 67 68 51-24 83 84 74-52 53 18 77-111 67 72 45-31 73 67v300H0Z" fill="#0c232b"/>
+  <path d="m0 682 104-38 77 23 94-40 87 54 103-12 135-74 91 55 69-17v267H0Z" fill="#081c26"/>
+</svg>
