@@ -2,9 +2,27 @@ export const SIZE = 8;
 export const TYPES = 6;
 let serial = 0;
 export const CHAPTERS = [
-  { name: 'Лунные сады', subtitle: 'Там, где пробуждается свет', numeral: 'I', color: '#76e4d8' },
-  { name: 'Янтарные руины', subtitle: 'Эхо забытого солнца', numeral: 'II', color: '#edbf6e' },
-  { name: 'Звёздная обитель', subtitle: 'За гранью ночного неба', numeral: 'III', color: '#b5a5ff' },
+  {
+    name: 'Лунные сады', subtitle: 'Там, где пробуждается свет', numeral: 'I', color: '#76e4d8', emblem: 'moon',
+    lead: 'Тихие сады под полной луной. Свет здесь только просыпается, а кристаллы сами тянутся друг к другу.',
+    rule: 'С четвёртого уровня на клетках появляется лёд. Комбинация на замёрзшей клетке разбивает его.',
+    frostName: 'Лёд', frostIcon: 'snow', frostNote: 'Собирайте комбинации<br>на клетках со льдом.', frostHint: 'лёд ложится россыпью',
+    traits: ['26–28 ходов', 'лёд с 4-го уровня', 'две цели по цвету'],
+  },
+  {
+    name: 'Янтарные руины', subtitle: 'Эхо забытого солнца', numeral: 'II', color: '#edbf6e', emblem: 'sun',
+    lead: 'Разрушенный храм в вечном закате. Песок веков засыпал плиты вдоль стен и упавших колонн.',
+    rule: 'Вместо льда — песок. Он ложится стенами по краю поля и колоннами посередине, и его заметно больше.',
+    frostName: 'Песок', frostIcon: 'sand', frostNote: 'Сметайте песок<br>комбинациями на плитах.', frostHint: 'песок держится у стен и колонн',
+    traits: ['28–30 ходов', 'песок на каждом уровне', 'цели на три кристалла больше'],
+  },
+  {
+    name: 'Звёздная обитель', subtitle: 'За гранью ночного неба', numeral: 'III', color: '#b5a5ff', emblem: 'star',
+    lead: 'Последний чертог над облаками. Кристаллы здесь отражают созвездия, а тишина звенит светом.',
+    rule: 'Звёздная пыль ложится созвездиями, зеркально с двух сторон поля. Света для победы нужно почти вдвое больше.',
+    frostName: 'Пыль', frostIcon: 'dust', frostNote: 'Стряхните звёздную пыль<br>комбинациями на клетках.', frostHint: 'пыль ложится зеркальными созвездиями',
+    traits: ['30–32 хода', 'пыль до 24 клеток', 'вдвое больше света'],
+  },
 ];
 export const GEM_NAMES = ['рубин', 'янтарь', 'аметист', 'изумруд', 'аквамарин', 'сапфир'];
 export const GEM_COLORS = ['#ff667b', '#ffd06e', '#bc85ff', '#69edb7', '#73e9ff', '#7b9eff'];
@@ -85,10 +103,25 @@ export function createBoard(rng = Math.random) {
   throw new Error('Unable to create a playable board');
 }
 
-export function createFrost(count, rng = Math.random) {
+const ruinsWeight = i => { const r = i / 8 | 0, c = i % 8; return r === 0 || r === 7 || c === 0 || c === 7 || c === 3 || c === 4 ? 5 : 1; };
+function pickWeighted(choices, weight, rng) {
+  const total = choices.reduce((sum, i) => sum + weight(i), 0);
+  let roll = rng() * total;
+  for (let k = 0; k < choices.length; k++) { roll -= weight(choices[k]); if (roll < 0) return choices.splice(k, 1)[0]; }
+  return choices.pop();
+}
+// Каждый мир кладёт преграды по-своему: россыпью, стенами и колоннами руин или зеркальными созвездиями.
+export function createFrost(count, rng = Math.random, chapter = 0) {
   const frost = Array(64).fill(0);
+  const total = Math.max(0, Math.min(64, count | 0));
+  if (chapter === 2) {
+    const left = Array.from({ length: 32 }, (_, k) => (k / 4 | 0) * 8 + k % 4);
+    for (let n = 0; n + 1 < total; n += 2) { const i = left.splice(Math.floor(rng() * left.length), 1)[0]; frost[i] = 1; frost[i - i % 8 + 7 - i % 8] = 1; }
+    if (total % 2) { const rest = frost.map((v, i) => v ? -1 : i).filter(i => i >= 0); frost[rest[Math.floor(rng() * rest.length)]] = 1; }
+    return frost;
+  }
   const choices = Array.from({ length: 64 }, (_, i) => i);
-  for (let n = 0; n < count; n++) frost[choices.splice(Math.floor(rng() * choices.length), 1)[0]] = 1;
+  for (let n = 0; n < total; n++) frost[chapter === 1 ? pickWeighted(choices, ruinsWeight, rng) : choices.splice(Math.floor(rng() * choices.length), 1)[0]] = 1;
   return frost;
 }
 
