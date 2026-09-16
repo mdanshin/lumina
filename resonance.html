@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07131e">
+  <meta name="description" content="Резонанс — третья игра Lumina. Складывайте свет, путешествуйте сквозь сияние, океан и космос под музыку, которая рождается из ваших действий.">
+  <title>LUMINA · Резонанс</title>
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./resonance.css">
+</head>
+<body>
+  <canvas id="universe" aria-hidden="true"></canvas>
+  <svg class="svg-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="m11 5-5 4H3v6h3l5 4V5Z M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
+    <symbol id="i-mute" viewBox="0 0 24 24"><path d="m11 5-5 4H3v6h3l5 4V5Z m5 4 5 6m0-6-5 6"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16M9 4v6m6 4v6"/></symbol>
+    <symbol id="i-fullscreen" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></symbol>
+    <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 13V11a8 8 0 0 1 16 0v2M4 12H2v8h5v-8H4Zm16 0h2v8h-5v-8h3Z"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m10 5-7 7 7 7M3 12h18"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6"/></symbol>
+    <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3v13m-5-5 5 5 5-5M4 21h16"/></symbol>
+    <symbol id="i-hold" viewBox="0 0 24 24"><path d="M3 7h15m-4-4 4 4-4 4M21 17H6m4-4-4 4 4 4"/></symbol>
+  </defs></svg>
+
+  <header class="header">
+    <a class="brand" href="./" aria-label="Lumina — выбрать игру"><span class="brand-symbol">◇</span><span>LUMINA<small>КОЛЛЕКЦИЯ МИРОВ</small></span></a>
+    <span class="header-caption">МИР 03 <span> / </span> ИСКУССТВО БЫТЬ ЗДЕСЬ</span>
+    <nav class="header-actions" aria-label="Управление игрой">
+      <button class="icon-button" id="sound-button" aria-label="Выключить весь звук" title="Звук"><svg><use href="#i-sound"/></svg></button>
+      <button class="icon-button" id="pause-button" aria-label="Пауза" title="Пауза · Esc" disabled><svg><use href="#i-pause"/></svg></button>
+      <button class="icon-button fullscreen-button" id="fullscreen-button" aria-label="Полный экран" title="Полный экран"><svg><use href="#i-fullscreen"/></svg></button>
+      <button class="icon-button" id="settings-button" aria-label="Настройки" title="Настройки"><svg><use href="#i-settings"/></svg></button>
+    </nav>
+  </header>
+
+  <main>
+    <div class="title-block"><p class="eyebrow">СВЕТ ОБРЕТАЕТ ЗВУК</p><h1>Резонанс</h1><p class="subtitle">Складывайте свет. Слушайте бесконечность.</p></div>
+    <div class="game-layout">
+      <aside class="left-panel" aria-label="Путешествие и счёт">
+        <div class="world-story"><p class="eyebrow" id="world-number">01 / ПРОБУЖДЕНИЕ</p><h2 id="world-name">Северное<br>сияние</h2><p id="world-detail">Вдохните. Всё начинается с одной искры.</p><span class="story-line"></span></div>
+        <div class="score-group"><span class="small-label">СОБРАНО СВЕТА</span><strong id="score">0</strong><span id="best" class="best">Личный рекорд · 0</span></div>
+        <div class="stats"><div><span class="small-label">ЛИНИИ</span><strong id="lines">0 <small>/ 24</small></strong></div><div><span class="small-label">В ПОТОКЕ</span><strong id="time">00:00</strong></div></div>
+        <p class="mode-label" id="mode-label">ПУТЕШЕСТВИЕ · 72 ЛИНИИ</p>
+      </aside>
+
+      <section class="play-area" aria-label="Резонанс — игровое поле">
+        <div class="board-topline"><span><i class="live-dot"></i><span id="board-status">ТИШИНА ПЕРЕД ПЕРВОЙ НОТОЙ</span></span><span>10 × 20</span></div>
+        <div class="board-frame" id="board-frame">
+          <i class="corner tl" aria-hidden="true"></i><i class="corner tr" aria-hidden="true"></i><i class="corner bl" aria-hidden="true"></i><i class="corner br" aria-hidden="true"></i>
+          <canvas id="board" tabindex="0" role="application" aria-label="Поле 10 на 20. Стрелки влево и вправо — движение; вверх — поворот; вниз — мягкое падение; пробел — сброс; C — запас; F — поток; Escape — пауза." aria-describedby="control-summary"></canvas>
+          <div class="board-overlay" id="board-overlay">
+            <div class="overlay-orbit" aria-hidden="true"><span>✧</span></div>
+            <p class="eyebrow" id="overlay-eyebrow">ВАШЕ МАЛЕНЬКОЕ БЕСКОНЕЧНОЕ</p>
+            <h2 id="overlay-title">Поймайте<br>поток</h2>
+            <p id="overlay-description">Падающие фигуры.<br>Рождающаяся музыка.<br>Только этот момент.</p>
+            <div class="mode-switch" id="mode-switch" role="group" aria-label="Режим новой игры"><button id="journey-mode" aria-pressed="true">Путешествие</button><button id="zen-mode" aria-pressed="false">Дзен ∞</button></div>
+            <button class="primary-button" id="start-button">Начать <span aria-hidden="true">→</span></button>
+            <button class="text-button" id="new-button" hidden>Новое путешествие</button>
+            <span class="overlay-note" id="overlay-note"><svg><use href="#i-headphones"/></svg>Лучше в наушниках</span>
+          </div>
+          <div class="combo-message" id="combo-message" aria-hidden="true"></div>
+        </div>
+        <button class="flow-button" id="flow-button" disabled aria-describedby="flow-hint"><span class="flow-icon" aria-hidden="true">✧</span><span><b id="flow-label">ПОТОК</b><small id="flow-hint">Собирайте линии, чтобы замедлить мир</small></span><span class="flow-amount" id="flow-amount">0%</span><kbd>F</kbd><i class="flow-fill" id="flow-fill"></i></button>
+      </section>
+
+      <aside class="right-panel" aria-label="Следующие фигуры и запас">
+        <div class="next-group"><span class="small-label">ДАЛЕЕ</span><canvas id="next-0" class="next-preview" aria-label="Следующая фигура"></canvas><canvas id="next-1" class="next-preview secondary" aria-label="Вторая фигура"></canvas><canvas id="next-2" class="next-preview secondary" aria-label="Третья фигура"></canvas></div>
+        <button class="hold-group" id="hold-button" disabled aria-label="Отложить фигуру в запас · C"><span class="small-label">ЗАПАС <kbd>C</kbd></span><canvas id="hold-preview" aria-hidden="true"></canvas><small id="hold-note">Место для вдоха</small></button>
+        <div class="quiet-note"><span aria-hidden="true">〰</span><p>Не спешите.<br>Каждая линия —<br>новое дыхание.</p></div>
+      </aside>
+    </div>
+
+    <div class="touch-controls" aria-label="Сенсорное управление">
+      <button data-action="hold" aria-label="Запас"><svg><use href="#i-hold"/></svg><small>Запас</small></button>
+      <button data-action="left" aria-label="Влево"><svg><use href="#i-back"/></svg></button>
+      <button data-action="rotate" aria-label="Повернуть"><svg><use href="#i-rotate"/></svg></button>
+      <button data-action="right" aria-label="Вправо"><svg class="flip"><use href="#i-back"/></svg></button>
+      <button data-action="down" aria-label="Опустить на клетку"><span>↓</span></button>
+      <button data-action="drop" aria-label="Сбросить фигуру"><svg><use href="#i-drop"/></svg><small>Сброс</small></button>
+    </div>
+    <p class="control-summary" id="control-summary"><span><kbd>←</kbd><kbd>→</kbd> двигать</span><span><kbd>↑</kbd> поворот</span><span><kbd>↓</kbd> опустить</span><span><kbd>Пробел</kbd> сбросить</span><span><kbd>C</kbd> запас</span><button id="help-button">Как играть <span aria-hidden="true">↗</span></button></p>
+    <nav class="journey-path" aria-label="Миры путешествия"><button data-world="0" aria-current="step"><span class="path-dot"></span><span><small>01</small> Северное сияние</span><i></i></button><button data-world="1" disabled><span class="path-dot"></span><span><small>02</small> Глубина</span><i></i></button><button data-world="2" disabled><span class="path-dot"></span><span><small>03</small> Звёздный океан</span><i></i></button></nav>
+  </main>
+
+  <footer class="footer"><div class="now-playing"><span class="equalizer" id="equalizer" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span><small>ЗВУК ЭТОГО МОМЕНТА</small><span id="track-title">Первый свет</span></span></div><p id="save-status">Ваше путешествие сохранится здесь</p><button class="text-button" id="footer-help"><svg><use href="#i-headphones"/></svg><span>Наденьте наушники. Остальное подождёт.</span></button></footer>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="sr-only" id="announcer" aria-live="polite" aria-atomic="true"></div>
+  <dialog id="settings-dialog" aria-labelledby="settings-title">
+    <div class="dialog-heading"><span class="eyebrow">ВАШ РИТМ</span><button class="icon-button" data-close="settings-dialog" aria-label="Закрыть настройки">×</button></div><h2 id="settings-title">Настроиться</h2>
+    <label class="setting-row" for="volume"><span>Громкость<small id="volume-value">65%</small></span><input id="volume" type="range" min="0" max="100" value="65"></label>
+    <label class="setting-row" for="music-toggle"><span>Музыка<small>Клавиши, тёплые аккорды и эхо</small></span><input id="music-toggle" type="checkbox" checked></label>
+    <label class="setting-row" for="effects-toggle"><span>Звуки игры<small>Ноты ваших действий</small></span><input id="effects-toggle" type="checkbox" checked></label>
+    <label class="setting-row" for="motion-toggle"><span>Живые эффекты<small>Сияние, частицы и плавные движения</small></span><input id="motion-toggle" type="checkbox" checked></label>
+    <button class="secondary-button" id="restart-button">Начать новую игру</button><p class="dialog-note">Текущая партия сохранена. Закройте настройки и нажмите «Продолжить».</p>
+  </dialog>
+  <dialog id="help-dialog" aria-labelledby="help-title">
+    <div class="dialog-heading"><span class="eyebrow">НЕМНОГО О ПОТОКЕ</span><button class="icon-button" data-close="help-dialog" aria-label="Закрыть правила">×</button></div><h2 id="help-title">Складывайте свет</h2>
+    <p>Заполните горизонтальную линию без пробелов, и она превратится в свет и музыку. Контур внизу показывает, где приземлится фигура.</p>
+    <dl class="help-controls"><dt>← → / A D</dt><dd>Двигать</dd><dt>↑ / X · Z</dt><dd>Поворот вправо · влево</dd><dt>↓ / S</dt><dd>Мягкое падение</dd><dt>Пробел</dt><dd>Сразу опустить фигуру</dd><dt>C / Shift</dt><dd>Запас, один раз до посадки</dd><dt>F</dt><dd>Поток: 16 секунд без гравитации, очки ×2</dd><dt>Esc / P</dt><dd>Пауза</dd></dl>
+    <p><strong>На телефоне:</strong> касание поля поворачивает фигуру, движение пальца влево или вправо перемещает её, вниз — опускает. Для мгновенного сброса используйте кнопку под полем.</p>
+    <p><strong>Путешествие:</strong> три мира по 24 линии. <strong>Дзен:</strong> спокойная скорость, свободный выбор мира; заполненное поле мягко очищается, и игра продолжается.</p>
+    <button class="primary-button" data-close="help-dialog">Понятно <span aria-hidden="true">✧</span></button>
+  </dialog>
+  <dialog id="restart-dialog" aria-labelledby="restart-title"><div class="dialog-heading"><span class="eyebrow">НОВАЯ ИСКРА</span><button class="icon-button" data-close="restart-dialog" aria-label="Отмена">×</button></div><h2 id="restart-title">Начать заново?</h2><p>Текущая партия будет заменена. Ваш личный рекорд останется.</p><div class="dialog-buttons"><button class="secondary-button" data-close="restart-dialog">Остаться</button><button class="primary-button" id="confirm-restart">Новая игра</button></div></dialog>
+  <noscript><p class="noscript">Чтобы запустить «Резонанс», включите JavaScript в браузере.</p></noscript>
+  <script type="module" src="./resonance.js"></script>
+</body>
+</html>
