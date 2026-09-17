@@ -104,8 +104,9 @@ h1{font-size:30px;margin:6px 0 4px}
 
 /* Телефон в портретной ориентации: поле во всю ширину, читаемый текст, кнопки не меньше 40 px. */
 @media(max-width:640px){:root{--board-size:min(100vw - 20px,max(290px,100svh - 296px))}
-body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
-.play-area{max-width:var(--board-size);margin:0 auto}
+.play-area{display:flex;flex-direction:column;flex:1;min-height:0}
+.board-toolbar,.board-frame{width:100%;max-width:var(--board-size);margin-left:auto;margin-right:auto}
+.board-frame{flex-shrink:0;margin-bottom:auto}
 .header{height:54px;padding:0 max(10px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left));gap:10px}
 .brand{flex-shrink:0}
 .brand-type{font-size:20px;letter-spacing:.11em}
@@ -147,24 +148,22 @@ h1+p,.chapter-heading p{display:none}
 .toolbar-actions{gap:2px;margin-right:-6px}
 .map-shortcut{display:inline-flex}
 .level-label{font-size:12px;letter-spacing:.14em}
-.board-status{font-size:12px;margin:0 6px}
+.board-status{font-size:12px;margin:0 6px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .restart,.map-shortcut{width:38px;height:38px}
 .restart svg,.map-shortcut svg{width:18px;height:18px}
 .board-frame{padding:8px}
-.boosters{position:fixed;left:0;right:0;bottom:0;z-index:20;margin:0;padding:7px max(12px,env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));gap:6px;background:linear-gradient(180deg,var(--panel-a),var(--panel-b));border-top:1px solid var(--panel-line);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 -10px 30px #0005}
+.boosters{margin:10px calc(-1 * max(10px,env(safe-area-inset-left))) 0 calc(-1 * max(10px,env(safe-area-inset-right)));padding:7px max(12px,env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));gap:6px;background:linear-gradient(180deg,var(--panel-a),var(--panel-b));border-top:1px solid var(--panel-line);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 -10px 30px #0005;flex-shrink:0}
 .booster{gap:8px;min-height:44px;padding:2px}
 .booster-icon{width:40px;height:42px;border-radius:10px}
 .booster-icon svg{width:26px;height:26px}
 .booster-icon b{font-size:12px;height:19px;min-width:19px}
 .booster>span+span{font-size:14px}
 .booster-divider{height:28px}
-.play-instruction{font-size:12px;line-height:1.5;margin-top:12px}
-.footer,.footer button{font-size:12px}
-.footer{padding:12px 12px max(20px,env(safe-area-inset-bottom));gap:16px}
-.footer button{padding:10px 0}
+.play-instruction{display:none}
+.footer{display:none}
 .combo-label{font-size:36px}
 .combo-label small{font-size:12px}
-.toast{bottom:calc(76px + env(safe-area-inset-bottom));font-size:14px;padding:12px 18px;max-width:calc(100vw - 32px)}
+.toast{bottom:calc(74px + env(safe-area-inset-bottom));font-size:14px;padding:12px 18px;max-width:calc(100vw - 32px)}
 }
 
 @media(max-width:374px){.header{padding-left:10px;padding-right:8px;gap:6px}
@@ -183,9 +182,9 @@ h1+p,.chapter-heading p{display:none}
 .level-label{font-size:11px}
 .board-status{font-size:11px}
 .board-frame{padding:7px}
-.boosters{gap:4px}
-.booster{gap:6px}
-.booster-icon{width:38px;height:40px}
+.boosters{gap:3px;padding-left:8px;padding-right:8px}
+.booster{gap:5px}
+.booster-icon{width:36px;height:38px}
 .booster>span+span{font-size:13px}
 .play-instruction{font-size:11px}
 }
@@ -253,8 +252,9 @@ h1+p,.chapter-heading p{display:none}
 .frame-corner{width:20px;height:20px}
 .board-frame:after{font-size:11px;top:-8px}
 .board-frame:before{inset:4px;border-radius:8px}
-body{padding-bottom:0}
-.boosters{position:static;grid-column:2;grid-row:1/3;flex-direction:column;align-items:stretch;justify-content:center;gap:10px;margin:0;padding:0;background:none;border:0;box-shadow:none;backdrop-filter:none}
+.play-area{display:grid}
+.board-toolbar,.board-frame{width:auto;max-width:none;margin-left:0;margin-right:0}
+.boosters{grid-column:2;grid-row:1/3;flex-direction:column;align-items:stretch;justify-content:center;gap:10px;margin:0;padding:0;background:none;border:0;box-shadow:none;backdrop-filter:none}
 .booster{flex-direction:column;gap:5px;min-height:0;padding:6px 2px;text-align:center;justify-content:center;border:1px solid #cfc28a1a;background:#0a242d70;border-radius:12px}
 .booster-icon{width:42px;height:44px;border-radius:11px}
 .booster-icon svg{width:24px;height:24px}
@@ -353,3 +353,11 @@ body[data-chapter="2"] .ambient i{animation-name:twinkle;animation-duration:6s;w
 .chapter-intro{margin:-38px -23px -25px;padding:0 23px 25px}
 .chapter-intro .world-art{height:120px;margin:0 -23px 20px}
 }
+
+/* Режим приложения на сенсорных экранах: страница не прокручивается, поле занимает свободное место. */
+body.app-shell{position:fixed;inset:0;height:100vh;height:100dvh;min-height:0;overflow:hidden;display:flex;flex-direction:column;overscroll-behavior:none;touch-action:manipulation;padding-bottom:0}
+.app-shell .header{flex-shrink:0}
+.app-shell main{flex:1;min-height:0;display:flex;flex-direction:column}
+.app-shell .chapter-heading{flex-shrink:0}
+.app-shell .game-layout{flex:1;min-height:0;width:100%}
+.app-shell .footer,.app-shell .play-instruction{display:none}
