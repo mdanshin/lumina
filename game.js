@@ -196,6 +196,37 @@ function resizeCanvas() {
   if (physical && canvas.width !== physical) { canvas.width = physical; canvas.height = physical; }
 }
 new ResizeObserver(resizeCanvas).observe(canvas);
+// Режим приложения на сенсорных экранах: страница не прокручивается, а поле подстраивается под свободное место.
+const touchScreen = matchMedia('(pointer:coarse)'), sideBoosters = matchMedia('(max-width:1000px) and (max-height:520px) and (orientation:landscape)');
+let naturalBoard = 0, fitQueued = false;
+function measureNaturalBoard() {
+  const root = document.documentElement, frame = $('board-frame');
+  const current = root.style.getPropertyValue('--board-size');
+  root.style.removeProperty('--board-size'); naturalBoard = frame.offsetWidth;
+  if (current) root.style.setProperty('--board-size', current);
+}
+function fitLayout() {
+  fitQueued = false;
+  const root = document.documentElement, body = document.body;
+  if (!touchScreen.matches) { body.classList.remove('app-shell'); root.style.removeProperty('--board-size'); return; }
+  body.classList.add('app-shell');
+  if (sideBoosters.matches || !naturalBoard) { root.style.removeProperty('--board-size'); return; }
+  const frame = $('board-frame'), viewport = Math.round(visualViewport?.height || innerHeight);
+  const outer = el => { if (!el || el.offsetParent === null) return 0; const cs = getComputedStyle(el); return el.offsetHeight + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom); };
+  let tail = 0; for (let el = frame.nextElementSibling; el; el = el.nextElementSibling) tail += outer(el);
+  tail += outer(document.querySelector('.footer'));
+  const available = Math.floor(viewport - frame.getBoundingClientRect().top - tail - 4);
+  const size = Math.max(240, Math.min(naturalBoard, available));
+  const current = parseFloat(root.style.getPropertyValue('--board-size')) || naturalBoard;
+  if (Math.abs(size - current) >= 1) root.style.setProperty('--board-size', `${size}px`);
+  body.classList.toggle('app-shell', available >= 240);
+}
+function queueFit() { if (!fitQueued) { fitQueued = true; requestAnimationFrame(fitLayout); } }
+function refitLayout() { if (touchScreen.matches) { document.body.classList.add('app-shell'); measureNaturalBoard(); } queueFit(); }
+addEventListener('resize', refitLayout); addEventListener('orientationchange', refitLayout); visualViewport?.addEventListener('resize', refitLayout);
+touchScreen.addEventListener?.('change', refitLayout);
+const fitObserver = new ResizeObserver(queueFit);
+for (const el of document.querySelectorAll('.header, .chapter-heading, .hud, .board-toolbar, .boosters')) fitObserver.observe(el);
 function rounded(x, y, w, h, radius) { ctx.beginPath(); ctx.roundRect(x, y, w, h, radius); }
 function sprite(type, x, y, size = 82, alpha = 1, rotation = 0) {
   if (!atlasReady || alpha <= 0) return;
@@ -581,5 +612,5 @@ window.addEventListener('pagehide', save);
 atlas.onload = () => { atlasReady = true; $('board-loading').classList.add('loaded'); resizeCanvas(); };
 atlas.onerror = () => { $('board-loading').innerHTML = '<p>Не удалось загрузить кристаллы.</p><button class="primary-button" id="reload-assets">Попробовать ещё раз</button>'; $('reload-assets').addEventListener('click', () => { atlas.src = './assets/gems.webp?retry=' + Date.now(); }); };
 atlas.src = './assets/gems.webp';
-applyPrefs(); loadGame(profile.mode); resizeCanvas(); requestAnimationFrame(render);
+applyPrefs(); loadGame(profile.mode); refitLayout(); resizeCanvas(); requestAnimationFrame(render);
 if (!profile.seen) { profile.seen = true; save(); if (!$('modal').open) setTimeout(() => toast('Добро пожаловать в Лунные сады. Соедините три одинаковых кристалла.'), 1100); }
